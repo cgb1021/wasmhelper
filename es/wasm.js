@@ -104,7 +104,7 @@ WASM.prototype.ccall = function (ident, returnType, args) {
  * @param {Number} size: 字符串长度（可选）
  * @return {String}
  */
-WASM.prototype.strRead = function (ptr, size) {
+WASM.prototype.mem2str = function (ptr, size) {
 	return utils.UTF8ToString(this.HEAPU8, ptr, size)
 }
 /*
@@ -112,11 +112,21 @@ WASM.prototype.strRead = function (ptr, size) {
  * @param {String} str: 字符串
  * @return {Number} buffer offset
  */
-WASM.prototype.strWrite = function (str) {
-	const exports = this.exports
+WASM.prototype.str2mem = function (str) {
 	const size = utils.lengthBytesUTF8(str)
-	const ptr = exports.malloc(size + 1)
+	const ptr = this.exports.malloc(size + 1)
 	utils.stringToUTF8(str, this.HEAPU8, ptr, size)
+	return ptr
+}
+/*
+ * @description: 把数组放入内存
+ * @param {Array} arr: 数组
+ * @return {Number} buffer offset
+ */
+WASM.prototype.arr2mem = function (arr) {
+	const bytes = this.HEAP32.BYTES_PER_ELEMENT
+	const ptr = this.exports.malloc(arr.length * bytes)
+	this.HEAP32.set(arr, ptr / bytes)
 	return ptr
 }
 /*

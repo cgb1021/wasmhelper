@@ -1,5 +1,5 @@
 {
-  "name": "wasmutil",
+  "name": "wasmhelper",
   "version": "0.0.1",
   "description": "wasm utils",
   "main": "lib/index.js",
@@ -13,7 +13,12 @@
     "webassembly",
     "wasm"
   ],
-  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cgb1021/wasmutil.git"
+  },
+  "homepage": "https://github.com/cgb1021/wasmutil#readme",
+  "author": "cgb1021",
   "license": "MIT",
   "devDependencies": {
     "@babel/core": "^7.10.5",
