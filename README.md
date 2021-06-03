@@ -14,7 +14,7 @@ emcc hello.c --no-entry -s IMPORTED_MEMORY -s INITIAL_MEMORY=6291456 -s ALLOW_ME
 
 ##初始化
 ```
-import { wasm } from 'wasmhelper';
+import wasm from 'wasmhelper';
 const url = './assets/data/hello/hello.wasm';
 const asm = wasm(url, {
   ready: () => console.log('load wasm ready')

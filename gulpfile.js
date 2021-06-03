@@ -23,7 +23,7 @@ gulp.task('rollup', () => {
 		return bundle.write({
 			file: './dist/index.js',
 			format: 'umd',
-			name: 'wasmutil'
+			name: 'wasmhelper'
 		})
 	})
 })

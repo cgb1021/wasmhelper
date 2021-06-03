@@ -123,11 +123,37 @@ WASM.prototype.str2mem = function (str) {
  * @param {Array} arr: 数组
  * @return {Number} buffer offset
  */
-WASM.prototype.arr2mem = function (arr) {
-	const bytes = this.HEAP32.BYTES_PER_ELEMENT
+WASM.prototype.arr2mem = function (arr, type = 'i32') {
+	const heap = this.heap(type)
+	const bytes = heap.BYTES_PER_ELEMENT
 	const ptr = this.exports.malloc(arr.length * bytes)
-	this.HEAP32.set(arr, ptr / bytes)
+	heap.set(arr, ptr / bytes)
 	return ptr
+}
+/*
+ * @description: 获取内存
+ * @param {String} type: i32:HEAP32,i8:HEAP8,i16:HEAP16,u8:HEAPU8,u16:HEAPU16,u32:HEAPU32,float:HEAPF32,double:HEAPF64
+ * @return {TypeArray}
+ */
+WASM.prototype.heap = function (type = 'i32') {
+	switch (type) {
+	case 'i8':
+		return this.HEAP8
+	case 'i16':
+		return this.HEAP16
+	case 'u8':
+		return this.HEAPU8
+	case 'u16':
+		return this.HEAPU16
+	case 'u32':
+		return this.HEAPU32
+	case 'float':
+		return this.HEAPF32
+	case 'double':
+		return this.HEAPF64
+	default:
+		return this.HEAP32
+	}
 }
 /*
  * 慎用
@@ -136,41 +162,4 @@ WASM.prototype.grow = function (num) {
 	return this.memory.grow(num)
 }
 
-/*
- * @description: 生成WASM对象
- * @param {String|Object} instance: wasm资源{url|WebAssembly.Instance}
- * @param {Null|Object} importObject: {env: {}}
- * @return {Proxy}
- */
-export default function (instance, importObject = {}) {
-	const asm =  new WASM(instance, importObject)
-	return new Proxy(asm, {
-		get: (obj, k) => {
-			if (k in obj) {
-				return obj[k]
-			}
-			if (k in obj.exports) {
-				return obj.exports[k]
-			}
-		},
-		set: (obj, k, val) => {
-			const exclude = [
-				'exports',
-				'memory',
-				'HEAP8',
-				'HEAP16',
-				'HEAP32',
-				'HEAPU8',
-				'HEAPU16',
-				'HEAPU32',
-				'HEAPF32',
-				'HEAPF64'
-			]
-			if (exclude.includes(k)) {
-				return false
-			}
-			obj[k] = val
-			return true
-		}
-	})
-}
+export default WASM
