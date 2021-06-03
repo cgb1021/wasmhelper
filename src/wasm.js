@@ -2,7 +2,6 @@ import load from './load'
 import utils from './utils'
 
 function WASM(instance, importObject) {
-	this.buffer = null
 	this.HEAP8 = null
 	this.HEAP16 = null
 	this.HEAP32 = null
@@ -13,6 +12,7 @@ function WASM(instance, importObject) {
 	this.HEAPF64 = null
 	this.exports = null
 	this.memory = null
+	this.stack = 0
 	const init = (exports) => {
 		if (typeof exports.memory === 'object') {
 			this.memory = exports.memory
@@ -114,21 +114,68 @@ WASM.prototype.mem2str = function (ptr, size) {
  */
 WASM.prototype.str2mem = function (str) {
 	const size = utils.lengthBytesUTF8(str)
-	const ptr = this.exports.malloc(size + 1)
+	const ptr = this.malloc(size + 1)
 	utils.stringToUTF8(str, this.HEAPU8, ptr, size)
 	return ptr
 }
 /*
  * @description: 把数组放入内存
  * @param {Array} arr: 数组
+ * @param {String} type: 类型（可选）
  * @return {Number} buffer offset
  */
 WASM.prototype.arr2mem = function (arr, type = 'i32') {
 	const heap = this.heap(type)
 	const bytes = heap.BYTES_PER_ELEMENT
-	const ptr = this.exports.malloc(arr.length * bytes)
+	const ptr = this.malloc(arr.length * bytes)
 	heap.set(arr, ptr / bytes)
 	return ptr
+}
+/*
+ * @description: 从内存读取数组
+ * @param {Number} ptr: buffer offset
+ * @param {Number} length: 读取长度
+ * @param {String} type: 类型（可选）
+ * @return {Array}
+ */
+WASM.prototype.mem2arr = function (ptr, length, type = 'i32') {
+	const heap = this.heap(type)
+	const pos = ptr / heap.BYTES_PER_ELEMENT
+	return Array.from(heap.subarray(pos, pos + length))
+}
+/*
+ * @description: 分配内存
+ * @param {Number} bytes: 字节长度
+ * @return {Number}
+ */
+WASM.prototype.malloc = function (bytes) {
+	const exports = this.exports
+	let ptr = 0
+	if (typeof exports.malloc === 'function') {
+		ptr = exports.malloc(bytes)
+	} else {
+		if (this.stack === 0) {
+			this.stack = exports.stackSave()
+		}
+		ptr = exports.stackAlloc(bytes)
+	}
+	return ptr
+}
+/*
+ * @description: 清理内存
+ * @param {...Number} args: buffer offset
+ */
+WASM.prototype.free = function (...args) {
+	const exports = this.exports
+	if (typeof exports.free === 'function') {
+		args.forEach((ptr) => {
+			exports.free(ptr)
+		})
+	}
+	if (this.stack) {
+		exports.stackRestore(this.stack)
+		this.stack = 0
+	}
 }
 /*
  * @description: 获取内存

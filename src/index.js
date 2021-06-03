@@ -22,6 +22,8 @@ export default function (instance, importObject = {}) {
 		},
 		set: (obj, k, val) => {
 			const exclude = [
+				'malloc',
+				'free',
 				'exports',
 				'memory',
 				'HEAP8',
@@ -31,7 +33,7 @@ export default function (instance, importObject = {}) {
 				'HEAPU16',
 				'HEAPU32',
 				'HEAPF32',
-				'HEAPF64'
+				'HEAPF64',
 			]
 			if (exclude.includes(k)) {
 				return false

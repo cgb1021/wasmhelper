@@ -1,9 +1,10 @@
 # webassembly工具
 
 ##生成wasm
+安装编译工具：https://emscripten.org/docs/getting_started/downloads.html
 ```
 #默认
-emcc hello.c --no-entry -s "EXPORTED_FUNCTIONS=['_malloc','_free']" -o ../../data/hello/hello.wasm
+emcc hello.c --no-entry -o ../../data/hello/hello.wasm
 
 #定义内存
 emcc hello.c --no-entry -s INITIAL_MEMORY=6291456 -s "EXPORTED_FUNCTIONS=['_malloc','_free']" -o ../../data/hello/hello.wasm
@@ -34,6 +35,5 @@ const counter = asm.counter();
 const ptr = asm.str2mem(helloStr)
 const retPtr = asm.hello(ptr)
 const result = asm.mem2str(retPtr)
-asm.free(ptr)
-asm.free(retPtr)
+asm.free(ptr, retPtr)
 ```
