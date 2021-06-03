@@ -154,8 +154,12 @@ WASM.prototype.malloc = function (bytes) {
 	if (typeof exports.malloc === 'function') {
 		ptr = exports.malloc(bytes)
 	} else {
+		const stack = exports.stackSave()
+		if (bytes > stack) {
+			throw new Error('stack overflow')
+		}
 		if (this.stack === 0) {
-			this.stack = exports.stackSave()
+			this.stack = stack
 		}
 		ptr = exports.stackAlloc(bytes)
 	}

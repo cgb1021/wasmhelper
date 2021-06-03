@@ -9,9 +9,21 @@ const load = function (url, importObject) {
 		if (typeof importObject.env === 'undefined') {
 			importObject.env = {}
 		}
-		['emscripten_resize_heap', 'emscripten_memcpy_big', 'emscripten_notify_memory_growth'].forEach(key => {
+		['emscripten_resize_heap',
+			'emscripten_memcpy_big',
+			'emscripten_notify_memory_growth',
+			'emscripten_asm_const_int'
+		].forEach(key => {
 			if (typeof importObject.env[key] !== 'function') {
 				importObject.env[key] = () => {}
+			}
+		})
+		if (typeof importObject.wasi_snapshot_preview1 === 'undefined') {
+			importObject.wasi_snapshot_preview1 = {}
+		}
+		['proc_exit'].forEach(key => {
+			if (typeof importObject.wasi_snapshot_preview1[key] !== 'function') {
+				importObject.wasi_snapshot_preview1[key] = () => {}
 			}
 		})
 		return WebAssembly.instantiateStreaming(fetch(url), importObject)
