@@ -1,6 +1,6 @@
 import load from './load'
 import utils from './utils'
-
+/* split_flag */
 function WASM(instance, importObject) {
 	this.HEAP8 = null
 	this.HEAP16 = null
@@ -206,6 +206,7 @@ WASM.prototype.heap = function (type = 'i32') {
 		return this.HEAP32
 	}
 }
+/* split_flag */
 /*
  * 慎用
  */

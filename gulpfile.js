@@ -3,22 +3,37 @@ const del = require('del')
 const rollup = require('rollup')
 const babel = require('gulp-babel')
 const uglify = require('gulp-uglify')
-// const fs = require('fs')
-// const util = require('gulp-util')
+const replace = require('gulp-replace')
+const fs = require('fs')
 // const path = require("path")
+// const util = require('gulp-util')
 // ===================================
 gulp.task('clean', function (cb) {
 	return del([
 		'./dist/**/*',
 		'./es/**/*',
-		'./lib/**/*'
+		'./lib/**/*',
+		'./temp/**/*'
 	], cb)
+})
+gulp.task('replace', () => {
+	return gulp.src('./src/**/*')
+    .pipe(replace('/*{{UTILS}}*/', function() {
+      const text = fs.readFileSync('./src/utils.js')
+      const arr = text.toString().split('/* split_flag */')
+      return arr[0]
+    }))
+    .pipe(replace('/*{{WASM}}*/', function() {
+      const text = fs.readFileSync('./src/wasm.js')
+      const arr = text.toString().split('/* split_flag */')
+      return arr[1]
+    }))
+		.pipe(gulp.dest('./temp'))
 })
 gulp.task('rollup', () => {
 	return rollup.rollup({
-		input: './src/index.js',
-		plugins: [
-		]
+		input: './temp/index.js',
+		plugins: []
 	}).then(bundle => {
 		return bundle.write({
 			file: './dist/index.js',
@@ -36,14 +51,14 @@ gulp.task('babel', () => {
 		.pipe(gulp.dest('./dist'))
 })
 gulp.task('lib', () => {
-	return gulp.src('./src/**/*')
+	return gulp.src('./temp/**/*')
 		.pipe(babel({
 			presets: [['@babel/preset-env', { 'modules': 'commonjs' }]]
 		}))
 		.pipe(gulp.dest('./lib'))
 })
 gulp.task('es', () => {
-	return gulp.src('./src/**/*')
+	return gulp.src('./temp/**/*')
 		.pipe(gulp.dest('./es'))
 })
-gulp.task('build', gulp.series('clean', 'rollup', 'babel', gulp.parallel('lib', 'es')))
+gulp.task('build', gulp.series('clean', 'replace', 'rollup', 'babel', gulp.parallel('lib', 'es')))

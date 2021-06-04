@@ -104,6 +104,7 @@ function stringToUTF8(str, buffOrArr, outIdx, maxBytesToWrite) {
 	heap[outIdx] = 0
 	return outIdx - startIdx
 }
+/* split_flag */
 export default {
 	lengthBytesUTF8,
 	stringToUTF8,

@@ -2,6 +2,7 @@ import WASM from './wasm'
 
 export { default as load } from './load'
 export { default as utils } from './utils'
+export { default as worker } from './worker'
 export { WASM }
 /*
 * @description: 生成WASM对象
