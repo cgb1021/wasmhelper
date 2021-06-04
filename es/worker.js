@@ -1,5 +1,6 @@
 import load from './load'
 
+const type = 'webassemblyinit'
 const scripts = `
 const UTF8Decoder = typeof TextDecoder !== 'undefined' ? new TextDecoder('utf8') : undefined
 const err = console.warn.bind(console)
@@ -108,6 +109,11 @@ function stringToUTF8(str, buffOrArr, outIdx, maxBytesToWrite) {
 	return outIdx - startIdx
 }
 
+var utils = {
+  lengthBytesUTF8,
+	stringToUTF8,
+	UTF8ToString
+}
 
 function WASM(instance, importObject) {
 	this.HEAP8 = null
@@ -274,7 +280,7 @@ WASM.prototype.malloc = function (bytes) {
 	return ptr
 }
 /*
- * @description: 清理内存
+ * @description: 释放内存
  * @param {...Number} args: buffer offset
  */
 WASM.prototype.free = function (...args) {
@@ -316,7 +322,7 @@ WASM.prototype.heap = function (type = 'i32') {
 }
 
 let _instance = null;
-let wasm = null;
+var wasm = null;
 let _defaultFn = function () {}
 if (typeof importObject !== 'object') {
   importObject = {};
@@ -327,7 +333,7 @@ if (typeof importObject.env !== 'object') {
 importObject.env.emscripten_resize_heap = importObject.env.emscripten_resize_heap || _defaultFn;
 importObject.env.emscripten_memcpy_big = importObject.env.emscripten_memcpy_big || _defaultFn;
 let _initWASM = function (e) {
-  if (e.data.type === '{{type}}') {
+  if (e.data.type === '${type}') {
     WebAssembly.instantiate(e.data.mod, importObject).then(function(instance) {
       _instance = instance;
       wasm = new Proxy(new WASM(instance), {
@@ -362,7 +368,7 @@ let _initWASM = function (e) {
         }
       })
       postMessage({
-        type: 'ready'
+        type: 'webassemblyready'
       })
     });
     removeEventListener('message', _initWASM);
@@ -375,11 +381,9 @@ addEventListener('message', _initWASM)
 function createWorker (urlOrModule, workerSelector) {
 	// 把wasm塞入worker
 	let url = null
-	const type = `_insertMod${Date.now()}`
-	const appendScripts = scripts.replace('{{type}}', type)
 	const dom = document.querySelector(workerSelector)
 	if (dom) {
-		url = window.URL.createObjectURL(new Blob([dom.textContent + appendScripts]))
+		url = window.URL.createObjectURL(new Blob([scripts + dom.textContent]))
 	}
 	const worker = new Worker(url)
 	if (typeof urlOrModule === 'string') {

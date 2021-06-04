@@ -1,10 +1,16 @@
 import load from './load'
 
+const type = 'webassemblyinit'
 const scripts = `
 /*{{UTILS}}*/
+var utils = {
+  lengthBytesUTF8,
+	stringToUTF8,
+	UTF8ToString
+}
 /*{{WASM}}*/
 let _instance = null;
-let wasm = null;
+var wasm = null;
 let _defaultFn = function () {}
 if (typeof importObject !== 'object') {
   importObject = {};
@@ -15,7 +21,7 @@ if (typeof importObject.env !== 'object') {
 importObject.env.emscripten_resize_heap = importObject.env.emscripten_resize_heap || _defaultFn;
 importObject.env.emscripten_memcpy_big = importObject.env.emscripten_memcpy_big || _defaultFn;
 let _initWASM = function (e) {
-  if (e.data.type === '{{type}}') {
+  if (e.data.type === '${type}') {
     WebAssembly.instantiate(e.data.mod, importObject).then(function(instance) {
       _instance = instance;
       wasm = new Proxy(new WASM(instance), {
@@ -50,7 +56,7 @@ let _initWASM = function (e) {
         }
       })
       postMessage({
-        type: 'ready'
+        type: 'webassemblyready'
       })
     });
     removeEventListener('message', _initWASM);
@@ -63,11 +69,9 @@ addEventListener('message', _initWASM)
 function createWorker (urlOrModule, workerSelector) {
 	// 把wasm塞入worker
 	let url = null
-	const type = `_insertMod${Date.now()}`
-	const appendScripts = scripts.replace('{{type}}', type)
 	const dom = document.querySelector(workerSelector)
 	if (dom) {
-		url = window.URL.createObjectURL(new Blob([dom.textContent + appendScripts]))
+		url = window.URL.createObjectURL(new Blob([scripts + dom.textContent]))
 	}
 	const worker = new Worker(url)
 	if (typeof urlOrModule === 'string') {
