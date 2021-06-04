@@ -15,9 +15,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cgb1021/wasmutil.git"
+    "url": "git+https://github.com/cgb1021/wasmhelper.git"
   },
-  "homepage": "https://github.com/cgb1021/wasmutil#readme",
+  "homepage": "https://github.com/cgb1021/wasmhelper#readme",
   "author": "cgb1021",
   "license": "MIT",
   "devDependencies": {
