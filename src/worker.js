@@ -1,6 +1,6 @@
 import load from './load';
 
-const type = 'webassemblyinit';
+const type = 'wasminit';
 const scripts = `
 /*{{UTILS}}*/
 var utils = {
@@ -56,7 +56,7 @@ let _initWASM = function (e) {
         }
       })
       postMessage({
-        type: 'webassemblyready'
+        type: 'wasmready'
       })
     });
     removeEventListener('message', _initWASM);
@@ -66,28 +66,45 @@ let _initWASM = function (e) {
 addEventListener('message', _initWASM)
 `;
 
-function createWorker (urlOrModule, workerSelector) {
-  // 把wasm塞入worker
-  let url = null;
-  const dom = document.querySelector(workerSelector);
-  if (dom) {
-    url = window.URL.createObjectURL(new Blob([scripts + dom.textContent]));
-  }
-  const worker = new Worker(url);
-  if (typeof urlOrModule === 'string') {
-    load(urlOrModule).then((mod) => {
-      worker.postMessage({
-        type,
-        mod,
-      });
-    });
-  } else {
-    worker.postMessage({
-      type,
-      mod: urlOrModule,
-    });
-  }
-	
-  return worker;
+/*
+ * @description: 生成worker
+ * @param {String|Object} urlOrModule: wasm地址或者已编译module
+ * @param {String} urlOrSelector: url地址或者dom选择器
+ * @return {Promise<Worker>}
+ */
+function createWorker (urlOrModule, urlOrSelector) {
+  return new Promise((resove, reject) => {
+    // 把wasm塞入worker
+    const init = (text) => {
+      let url = window.URL.createObjectURL(new Blob([scripts + text]));
+      const worker = new Worker(url);
+      if (typeof urlOrModule === 'string') {
+        load(urlOrModule).then((mod) => {
+          worker.postMessage({
+            type,
+            mod,
+          });
+        }).catch(reject);
+      } else {
+        worker.postMessage({
+          type,
+          mod: urlOrModule,
+        });
+      }
+      resove(worker);
+    };
+    if (/^https?:\/\//.test(urlOrSelector)) {
+      fetch(urlOrSelector)
+        .then(response => response.text())
+        .then((text) => init(text));
+    } else {
+      const dom = document.querySelector(urlOrSelector);
+      if (dom) {
+        init(dom.textContent);
+      } else {
+        reject();
+      }
+    }
+  });
 }
 export default createWorker;

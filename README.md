@@ -62,12 +62,14 @@ addEventListener('message', function (e) {
 // index.js
 import { worker as createWorker, load } from 'wasmhelper'
 const Module = await load('./hello.wasm')
-const worker = createWorker(Module, '#worker')
-worker.addEventListener('message', (e) => {
-  if (e.data.type === 'webassemblyready') {
-    worker.postMessage('say hello')
-  }
-})
+createWorker(Module, '#worker').then(function (worker) {
+  worker.addEventListener('message', (e) => {
+    if (e.data.type === 'wasmready') {
+      worker.postMessage('say hello')
+    }
+  })
+});
+
 ```
 
 ## WASM对象方法

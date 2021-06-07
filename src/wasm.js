@@ -13,7 +13,12 @@ function WASM(instance, importObject) {
   this.exports = null;
   this.memory = null;
   this.stack = 0;
-  const init = (exports) => {
+
+  const callbacks = [];
+  let isInit = false;
+  const init = ({ exports }) => {
+    if (!exports) throw new Error('no exports');
+    isInit = true;
     if (typeof exports.memory === 'object') {
       this.memory = exports.memory;
     } else if (typeof importObject.env.memory === 'object') {
@@ -31,19 +36,20 @@ function WASM(instance, importObject) {
     this.HEAPF32 = new Float32Array(buf);
     this.HEAPF64 = new Float64Array(buf);
     this.exports = exports;
+    callbacks.forEach(fn => fn.call(this));
+    callbacks.length = 0;
+  };
+  this.ready = (fn) => {
+    if (typeof fn !== 'function') return;
+    if (isInit) fn.call(this);
+    else callbacks.push(fn);
   };
   if (typeof instance === 'string') {
-    let callback = typeof importObject.ready === 'function' ? importObject.ready : null;
-    delete importObject.ready;
     load(instance, importObject).then((res) => {
-      init(res.instance.exports);
-      if (callback) {
-        callback.call(this, instance);
-        callback = null;
-      }
+      init(res.instance);
     });
   } else {
-    init(instance.exports);
+    init(instance);
   }
 }
 /*

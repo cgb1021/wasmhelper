@@ -18,7 +18,7 @@ gulp.task('clean', function (cb) {
 });
 gulp.task('replace', () => {
   return gulp.src('./src/**/*')
-    .pipe(replace(/\/\*\{\{(UTILS|WASM)\}\}\*\//, function(match, p1) {
+    .pipe(replace(/\/\*\{\{(UTILS|WASM)\}\}\*\//g, function(match, p1) {
       const replaceIndex = {
         UTILS: 0,
         WASM: 1

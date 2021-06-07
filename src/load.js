@@ -31,10 +31,7 @@ const load = function (url, importObject) {
     } else {
       return fetch(url)
         .then(response => response.arrayBuffer())
-        .then(bytes => {
-          let mod = new WebAssembly.Module(bytes);
-          return new WebAssembly.Instance(mod, importObject);
-        });
+        .then(bytes => WebAssembly.instantiate(bytes, importObject));
     }
   } else {
     if (typeof WebAssembly.compileStreaming === 'function') {
@@ -42,9 +39,7 @@ const load = function (url, importObject) {
     } else {
       return fetch(url)
         .then(response => response.arrayBuffer())
-        .then(bytes => {
-          return new WebAssembly.Module(bytes);
-        });
+        .then(bytes => WebAssembly.compile(bytes));
     }
   }
 };

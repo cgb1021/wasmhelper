@@ -1,15 +1,14 @@
 {
   "name": "wasmhelper",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "wasm utils",
   "main": "lib/index.js",
   "module": "es/index.js",
   "unpkg": "dist/index.js",
   "scripts": {
-    "test": "mocha --timeout 5000",
+    "test": "concurrently --kill-others \"node express.js\" \"karma start ./karma.conf.js\"",
     "lint": "eslint --fix ./src gulpfile.js .eslintrc.js",
-    "build": "gulp build",
-    "server": "node express.js"
+    "build": "gulp build"
   },
   "keywords": [
     "webassembly",
@@ -24,8 +23,11 @@
   "license": "MIT",
   "devDependencies": {
     "@babel/core": "^7.10.5",
+    "@babel/plugin-transform-runtime": "^7.14.3",
     "@babel/preset-env": "^7.10.4",
+    "babel-loader": "^8.2.2",
     "chai": "^4.3.4",
+    "concurrently": "^6.2.0",
     "del": "^5.1.0",
     "eslint": "^7.7.0",
     "eslint-plugin-import": "^2.22.0",
@@ -35,8 +37,16 @@
     "gulp-replace": "^1.1.3",
     "gulp-uglify": "^3.0.2",
     "gulp-util": "^3.0.8",
+    "karma": "^6.3.3",
+    "karma-chai": "^0.1.0",
+    "karma-chai-as-promised": "^0.1.2",
+    "karma-chrome-launcher": "^3.1.0",
+    "karma-mocha": "^2.0.1",
+    "karma-webpack": "^5.0.0",
     "mocha": "^8.4.0",
     "node-fetch": "^2.6.1",
-    "rollup": "^2.50.2"
-  }
+    "rollup": "^2.50.2",
+    "webpack": "^5.38.1"
+  },
+  "dependencies": {}
 }
