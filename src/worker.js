@@ -1,6 +1,6 @@
-import load from './load'
+import load from './load';
 
-const type = 'webassemblyinit'
+const type = 'webassemblyinit';
 const scripts = `
 /*{{UTILS}}*/
 var utils = {
@@ -64,30 +64,30 @@ let _initWASM = function (e) {
   }
 }
 addEventListener('message', _initWASM)
-`
+`;
 
 function createWorker (urlOrModule, workerSelector) {
-	// 把wasm塞入worker
-	let url = null
-	const dom = document.querySelector(workerSelector)
-	if (dom) {
-		url = window.URL.createObjectURL(new Blob([scripts + dom.textContent]))
-	}
-	const worker = new Worker(url)
-	if (typeof urlOrModule === 'string') {
-		load(urlOrModule).then((mod) => {
-			worker.postMessage({
-				type,
-				mod,
-			})
-		})
-	} else {
-		worker.postMessage({
-			type,
-			mod: urlOrModule,
-		})
-	}
+  // 把wasm塞入worker
+  let url = null;
+  const dom = document.querySelector(workerSelector);
+  if (dom) {
+    url = window.URL.createObjectURL(new Blob([scripts + dom.textContent]));
+  }
+  const worker = new Worker(url);
+  if (typeof urlOrModule === 'string') {
+    load(urlOrModule).then((mod) => {
+      worker.postMessage({
+        type,
+        mod,
+      });
+    });
+  } else {
+    worker.postMessage({
+      type,
+      mod: urlOrModule,
+    });
+  }
 	
-	return worker
+  return worker;
 }
-export default createWorker
+export default createWorker;

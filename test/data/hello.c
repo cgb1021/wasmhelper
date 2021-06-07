@@ -18,8 +18,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 
 int count = 0;
+int count2 = 0;
+
 EM_PORT_API(int) size() {
   int len = 0;
   int res = count;
@@ -51,10 +54,44 @@ EM_PORT_API(int) reduce(int *list, int len)
   }
   return sum;
 }
+EM_PORT_API(int *) getPrimes(int n1, int n2) {
+  count2 = 0;
+  int *list = NULL;
+  int nBytes = sizeof(int);
+  int x = n1 > n2 ? n2 : n1;
+  int end = n1 > n2 ? n1 : n2;
+  for (; x <= end; x++) {
+    int mid = sqrt((double)x);
+    int y = 2;
+    int is = 1;
+    for (; y <= mid; y++) {
+      if (x % y == 0) {
+        is = 0;
+        break;
+      }
+    }
+    if (is) {
+      if (list == NULL) {
+        list = (int *)malloc(nBytes);
+      } else {
+        list = (int *)realloc(list, nBytes);
+      }
+      if (list == NULL) {
+        return list;
+      }
+      list[count2++] = x;
+    }
+  }
+  return list;
+}
+EM_PORT_API(int) getSize()
+{
+  return count2;
+}
 
-/* int main() {
-  int num[3] = {1, 2, 3};
-  int sum = add(num, 3);
-  printf("%d\n", sum);
+EM_PORT_API(void) callJS() {
+}
+
+int main(void) {
   return 0;
-} */
+}
