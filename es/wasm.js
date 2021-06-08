@@ -12,6 +12,7 @@ function WASM(instance, importObject) {
   this.HEAPF64 = null;
   this.exports = null;
   this.memory = null;
+  this.module = null;
   this.stack = 0;
 
   const callbacks = [];
@@ -36,20 +37,21 @@ function WASM(instance, importObject) {
     this.HEAPF32 = new Float32Array(buf);
     this.HEAPF64 = new Float64Array(buf);
     this.exports = exports;
-    callbacks.forEach(fn => fn.call(this));
+    callbacks.forEach(fn => fn.call(this, false));
     callbacks.length = 0;
   };
   this.ready = (fn) => {
     if (typeof fn !== 'function') return;
-    if (isInit) fn.call(this);
+    if (isInit) fn.call(this, true);
     else callbacks.push(fn);
   };
-  if (typeof instance === 'string') {
+  if (instance instanceof WebAssembly.Instance) {
+    init(instance);
+  } else {
     load(instance, importObject).then((res) => {
+      this.module = res.module;
       init(res.instance);
     });
-  } else {
-    init(instance);
   }
 }
 /*

@@ -73,7 +73,7 @@ addEventListener('message', _initWASM)
  * @return {Promise<Worker>}
  */
 function createWorker (urlOrModule, urlOrSelector) {
-  return new Promise((resove, reject) => {
+  return new Promise((resolve, reject) => {
     // 把wasm塞入worker
     const init = (text) => {
       let url = window.URL.createObjectURL(new Blob([scripts + text]));
@@ -91,7 +91,7 @@ function createWorker (urlOrModule, urlOrSelector) {
           mod: urlOrModule,
         });
       }
-      resove(worker);
+      resolve(worker);
     };
     if (/^https?:\/\//.test(urlOrSelector)) {
       fetch(urlOrSelector)

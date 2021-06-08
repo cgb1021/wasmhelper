@@ -1,11 +1,12 @@
 /*
  * @description: 生成WASM对象
- * @param {String} instance: wasm资源{url|WebAssembly.Instance}
+ * @param {String|Object} urlOrModule: wasm资源{urlOrModule|WebAssembly.Instance}
  * @param {Null|Object} importObject: {env: {}}
  * @return {Object} 传入importObject，返回WebAssembly.Instance，否则返回WebAssembly.Module
  */
-const load = function (url, importObject) {
+const load = function (urlOrModule, importObject) {
   if (importObject) {
+    // instantiate
     if (typeof importObject.env === 'undefined') {
       importObject.env = {};
     }
@@ -26,18 +27,21 @@ const load = function (url, importObject) {
         importObject.wasi_snapshot_preview1[key] = () => {};
       }
     });
-    if (typeof WebAssembly.instantiateStreaming === 'function') {
-      return WebAssembly.instantiateStreaming(fetch(url), importObject);
+    if (urlOrModule instanceof WebAssembly.Module) {
+      return WebAssembly.instantiate(urlOrModule, importObject);
+    } else if (typeof WebAssembly.instantiateStreaming === 'function') {
+      return WebAssembly.instantiateStreaming(fetch(urlOrModule), importObject);
     } else {
-      return fetch(url)
+      return fetch(urlOrModule)
         .then(response => response.arrayBuffer())
         .then(bytes => WebAssembly.instantiate(bytes, importObject));
     }
   } else {
+    // compile
     if (typeof WebAssembly.compileStreaming === 'function') {
-      return WebAssembly.compileStreaming(fetch(url));
+      return WebAssembly.compileStreaming(fetch(urlOrModule));
     } else {
-      return fetch(url)
+      return fetch(urlOrModule)
         .then(response => response.arrayBuffer())
         .then(bytes => WebAssembly.compile(bytes));
     }

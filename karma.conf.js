@@ -9,12 +9,15 @@ module.exports = function(config) {
 
     // 需要提供给浏览器的源文件和测试文件
     files: ['es/**/*.js', 'test/**/*.js'],
+
     preprocessors: {
       // 匹配源文件，并使用 webpack 进行预处理
       'es/**/*.js': ['webpack'],
       // 匹配测试文件，并使用 webpack 进行预处理
       'test/**/*.js': ['webpack']
     },
+
+    reporters: ['mocha'],
 
     // 在浏览器中运行的端口
     port: 8081,

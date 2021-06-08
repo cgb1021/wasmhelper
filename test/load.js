@@ -14,4 +14,12 @@ describe('load.js', function() {
       assert.instanceOf(res.module, WebAssembly.Module);
     });
   });
+  it('from module', function() {
+    return load(url).then(mod => {
+      load(mod, {}).then(res => {
+        assert.instanceOf(res.instance, WebAssembly.Instance);
+        assert.instanceOf(res.module, WebAssembly.Module);
+      });
+    });
+  });
 });
