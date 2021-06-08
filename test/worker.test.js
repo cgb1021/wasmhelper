@@ -55,4 +55,13 @@ describe('worker.js', function() {
       });
     });
   });
+  it('no dom', function (done) {
+    createWorker(url, '#worker2').catch(done);
+  });
+  it('no url', function (done) {
+    createWorker(url, 'http://localhost:8080/worker2.js').catch(() => done());
+  });
+  it('no module', function (done) {
+    createWorker('http://localhost:8080/hello2.wasm', '#worker').catch(() => done());
+  });
 });

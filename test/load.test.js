@@ -22,4 +22,15 @@ describe('load.js', function() {
       });
     });
   });
+  it('no module', function (done) {
+    load('http://localhost:8080/hello2.wasm').catch(() => done());
+  });
+  it('fetch instance', function (done) {
+    delete WebAssembly.instantiateStreaming;
+    load('http://localhost:8080/hello.wasm', {}).then(() => done());
+  });
+  it('fetch module', function (done) {
+    delete WebAssembly.compileStreaming;
+    load('http://localhost:8080/hello.wasm').then(() => done());
+  });
 });

@@ -26,6 +26,31 @@ describe('index.js', function() {
         done();
       });
     });
+    it('function in exports', function(done) {
+      wasm.ready(function () {
+        assert.isFunction(wasm.add);
+        assert.strictEqual(wasm.add, wasm.exports.add);
+        done();
+      });
+    });
+    it('set invalid', function(done) {
+      wasm.ready(function () {
+        try {
+          wasm.memory = { a: 'a' };
+        } catch (e) {
+          assert.instanceOf(wasm.memory, WebAssembly.Memory);
+        }
+        done();
+      });
+    });
+    it('set valid', function(done) {
+      wasm.ready(function () {
+        const memory  = {};
+        wasm.xyz = memory;
+        assert.strictEqual(wasm.xyz, memory);
+        done();
+      });
+    });
   });
   describe('#ready', function() {
     it('before init', function(done) {
@@ -49,42 +74,54 @@ describe('index.js', function() {
     });
   });
   describe('#ccall', function() {
-    it('simple', function() {
+    it('isFunction', function() {
       assert.isFunction(wasm.ccall);
+    });
+    it('return number', function() {
+      assert.strictEqual(wasm.ccall('counter', 'number'), 1);
+      assert.strictEqual(wasm.ccall('counter', 'number'), 2);
+    });
+    it('pass[return] number', function() {
+      assert.strictEqual(wasm.ccall('add', 'number', [5, 6]), 11);
+      assert.strictEqual(wasm.ccall('add', 'number', [345, 1234]), 1579);
+    });
+    it('pass[return] string', function() {
+      const str = 'hello world';
+      assert.strictEqual(wasm.ccall('hello', 'string', [str]), 'hello world2');
     });
   });
   describe('#mem2str', function() {
-    it('simple', function() {
+    it('isFunction', function() {
       assert.isFunction(wasm.mem2str);
     });
   });
   describe('#str2mem', function() {
-    it('simple', function() {
+    it('isFunction', function() {
       assert.isFunction(wasm.str2mem);
     });
   });
   describe('#arr2mem', function() {
-    it('simple', function() {
+    it('isFunction', function() {
       assert.isFunction(wasm.arr2mem);
     });
   });
   describe('#mem2arr', function() {
-    it('simple', function() {
+    it('isFunction', function() {
       assert.isFunction(wasm.mem2arr);
     });
   });
   describe('#malloc', function() {
-    it('simple', function() {
+    it('isFunction', function() {
       assert.isFunction(wasm.malloc);
     });
   });
   describe('#free', function() {
-    it('simple', function() {
+    it('isFunction', function() {
       assert.isFunction(wasm.free);
     });
   });
   describe('#heap', function() {
-    it('simple', function() {
+    it('isFunction', function() {
       assert.isFunction(wasm.heap);
     });
   });

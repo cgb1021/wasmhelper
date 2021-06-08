@@ -5,19 +5,32 @@ module.exports = function(config) {
 
     // 用到的库或框架
     // 添加到这里表示注册为全局变量（不用反复在代码中 import 或 require）
-    frameworks: ['mocha', 'chai'],
+    frameworks: ['mocha', 'chai', 'webpack'],
 
-    // 需要提供给浏览器的源文件和测试文件
-    files: ['es/**/*.js', 'test/**/*.js'],
+    files: [
+      // all files ending in ".test.js"
+      // !!! use watched: false as we use webpacks watch
+      { pattern: 'test/**/*.test.js', watched: false }
+    ],
 
     preprocessors: {
       // 匹配源文件，并使用 webpack 进行预处理
-      'es/**/*.js': ['webpack'],
+      'es/**/*.js': ['webpack', 'coverage'],
       // 匹配测试文件，并使用 webpack 进行预处理
       'test/**/*.js': ['webpack']
     },
 
-    reporters: ['mocha'],
+    reporters: ['mocha', 'coverage'],
+    coverageReporter: {
+      // 生成报告的目录
+      dir: 'test/data/coverage/',
+      // 要生成的报告类型
+      reporters: [
+        { type: 'lcov', subdir: '.' },
+        { type: 'text', subdir: '.', file: 'text.txt' },
+        { type: 'text-summary', subdir: '.', file: 'text-summary.txt' }
+      ]
+    },
 
     // 在浏览器中运行的端口
     port: 8081,
@@ -39,7 +52,7 @@ module.exports = function(config) {
               // 传递给 babel-loader 的参数
               options: {
                 presets: ['@babel/preset-env'],
-                plugins: ['@babel/plugin-transform-runtime']
+                plugins: ['istanbul', '@babel/plugin-transform-runtime']
               }
             }
           }

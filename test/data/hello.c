@@ -33,6 +33,10 @@ EM_PORT_API(int) size() {
 
   return len;
 }
+EM_PORT_API(int) add(int n1, int n2)
+{
+  return n1 + n2;
+}
 EM_PORT_API(int) counter()
 {
   return ++count;

@@ -397,26 +397,28 @@ function createWorker (urlOrModule, urlOrSelector) {
     // 把wasm塞入worker
     const init = (text) => {
       let url = window.URL.createObjectURL(new Blob([scripts + text]));
-      const worker = new Worker(url);
       if (typeof urlOrModule === 'string') {
         load(urlOrModule).then((mod) => {
+          const worker = new Worker(url);
           worker.postMessage({
             type,
             mod,
           });
+          resolve(worker);
         }).catch(reject);
       } else {
+        const worker = new Worker(url);
         worker.postMessage({
           type,
           mod: urlOrModule,
         });
+        resolve(worker);
       }
-      resolve(worker);
     };
     if (/^https?:\/\//.test(urlOrSelector)) {
       fetch(urlOrSelector)
         .then(response => response.text())
-        .then((text) => init(text));
+        .then((text) => init(text)).catch(reject);
     } else {
       const dom = document.querySelector(urlOrSelector);
       if (dom) {

@@ -2,7 +2,7 @@
  * @description: 生成WASM对象
  * @param {String|Object} urlOrModule: wasm资源{urlOrModule|WebAssembly.Instance}
  * @param {Null|Object} importObject: {env: {}}
- * @return {Object} 传入importObject，返回WebAssembly.Instance，否则返回WebAssembly.Module
+ * @return {Promise<WebAssembly.Instance|WebAssembly.Module>} 传入importObject，返回WebAssembly.Instance，否则返回WebAssembly.Module
  */
 const load = function (urlOrModule, importObject) {
   if (importObject) {
