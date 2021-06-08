@@ -130,7 +130,9 @@ function WASM(instance, importObject) {
   this.stack = 0;
 
   const callbacks = [];
+  const errCallbacks = [];
   let isInit = false;
+  let error = null;
   const init = ({ exports }) => {
     if (!exports) throw new Error('no exports');
     isInit = true;
@@ -159,12 +161,20 @@ function WASM(instance, importObject) {
     if (isInit) fn.call(this, true);
     else callbacks.push(fn);
   };
+  this.error = (fn) => {
+    if (typeof fn !== 'function') return;
+    if (error) fn.call(this, error);
+    else errCallbacks.push(fn);
+  };
   if (instance instanceof WebAssembly.Instance) {
     init(instance);
   } else {
     load(instance, importObject).then((res) => {
       this.module = res.module;
       init(res.instance);
+    }).catch((e) => {
+      error = e;
+      errCallbacks.forEach(fn => fn.call(this, e));
     });
   }
 }
@@ -276,16 +286,27 @@ WASM.prototype.malloc = function (bytes) {
   if (typeof exports.malloc === 'function') {
     ptr = exports.malloc(bytes);
   } else {
-    const stack = exports.stackSave();
-    if (bytes > stack) {
-      throw new Error('stack overflow');
+    try {
+      const stack = exports.stackSave();
+      if (bytes > stack) {
+        throw new Error('stack overflow');
+      }
+      if (this.stack === 0) {
+        this.stack = stack;
+      }
+      ptr = exports.stackAlloc(bytes);
+    } catch (e) {
+      console.error(e.message);
     }
-    if (this.stack === 0) {
-      this.stack = stack;
-    }
-    ptr = exports.stackAlloc(bytes);
   }
   return ptr;
+};
+/*
+ * @description: 获取剩余内存数量
+ * @return {Number}
+ */
+WASM.prototype.getFree = function () {
+  return this.exports.emscripten_stack_get_free();
 };
 /*
  * @description: 释放内存

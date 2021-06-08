@@ -25,7 +25,6 @@ export default function (instance, importObject = {}) {
       const exclude = [
         'exports',
         'memory',
-        'stack',
         'ccall',
         'malloc',
         'free',

@@ -22,7 +22,7 @@ const load = function (urlOrModule, importObject) {
     if (typeof importObject.wasi_snapshot_preview1 === 'undefined') {
       importObject.wasi_snapshot_preview1 = {};
     }
-    ['proc_exit'].forEach(key => {
+    ['proc_exit', 'fd_write'].forEach(key => {
       if (typeof importObject.wasi_snapshot_preview1[key] !== 'function') {
         importObject.wasi_snapshot_preview1[key] = () => {};
       }

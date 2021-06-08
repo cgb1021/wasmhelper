@@ -1,6 +1,8 @@
 #默认
 emcc hello.c --no-entry -s "EXPORTED_FUNCTIONS=['_malloc','_free']" -o ./hello.wasm
 
+emcc memory.c -s IMPORTED_MEMORY -s INITIAL_MEMORY=6291456 -s ALLOW_MEMORY_GROWTH=1 -o ./memory.wasm
+
 #定义内存
 emcc hello.c --no-entry -s INITIAL_MEMORY=6291456 -s "EXPORTED_FUNCTIONS=['_malloc','_free']" -o ./hello.wasm
 
