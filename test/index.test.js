@@ -1,5 +1,5 @@
-import { assert } from 'chai';
-import create, { WASM } from '../es/index';
+import { assert, expect } from 'chai';
+import create, { load, WASM } from '../es/index';
 const url = 'http://localhost:8080/hello.wasm';
 const wasm = create(url);
 
@@ -54,9 +54,6 @@ describe('index.js', function() {
   });
   describe('#error', function() {
     const wasm = create('http://localhost:8080/memory2.wasm');
-    it('isFunction', function() {
-      assert.isFunction(wasm.error);
-    });
     it('before', function(done) {
       const wasm = create('http://localhost:8080/memory2.wasm');
       wasm.error((e) => {
@@ -69,6 +66,24 @@ describe('index.js', function() {
         assert.isString(e.message);
         done();
       });
+    });
+    it('from instance', function(done) {
+      load('http://localhost:8080/hello.wasm', {}).then((res) => {
+        const wasm = create(res.instance);
+        assert.strictEqual(res.instance.exports, wasm.exports);
+        done();
+      });
+    });
+    it('no exports', function(done) {
+      load('http://localhost:8080/memory.wasm', {}).then((res) => {
+        const wasm = create(res.instance);
+        assert.strictEqual(res.instance.exports, wasm.exports);
+        done();
+      });
+    });
+    it('no url', function(done) {
+      const wasm = create('no url');
+      wasm.error(() => done());
     });
   });
   describe('#ready', function() {
@@ -93,9 +108,6 @@ describe('index.js', function() {
     });
   });
   describe('#ccall', function() {
-    it('isFunction', function() {
-      assert.isFunction(wasm.ccall);
-    });
     it('return number', function() {
       assert.strictEqual(wasm.ccall('counter', 'number'), 1);
       assert.strictEqual(wasm.ccall('counter', 'number'), 2);
@@ -118,12 +130,6 @@ describe('index.js', function() {
     });
   });
   describe('#mem2str&str2mem', function() {
-    it('isFunction', function() {
-      assert.isFunction(wasm.mem2str);
-    });
-    it('isFunction', function() {
-      assert.isFunction(wasm.str2mem);
-    });
     it('callable', function () {
       const helloStr = 'hello worker:';
       const counter = wasm.counter();
@@ -135,9 +141,6 @@ describe('index.js', function() {
     });
   });
   describe('#arr2mem', function() {
-    it('isFunction', function() {
-      assert.isFunction(wasm.arr2mem);
-    });
     it('callable', function () {
       const array = [33, 10, 1003, 503, 803, 10030];
       const ptr = wasm.arr2mem(array);
@@ -147,9 +150,6 @@ describe('index.js', function() {
     });
   });
   describe('#mem2arr', function() {
-    it('isFunction', function() {
-      assert.isFunction(wasm.mem2arr);
-    });
     it('callable', function () {
       const ptr = wasm.getPrimes(100, 200);
       const size = wasm.getSize();
@@ -162,30 +162,30 @@ describe('index.js', function() {
   describe('#malloc&free', function() {
     const memory = new WebAssembly.Memory({ initial: 96, maximum: 96 });
     const wasm2 = create('http://localhost:8080/memory.wasm', { env: { memory }});
-    it('isFunction', function() {
-      assert.isFunction(wasm2.malloc);
-    });
-    it('isFunction', function() {
-      assert.isFunction(wasm2.free);
-    });
     it('callable', function() {
-      const bytes = 4;
-      const size = wasm2.getFree();
-      assert.isNumber(size);
+      const bytes = 64;
+      const size1 = wasm2.getFree();
       const ptr = wasm2.malloc(bytes);
       assert.isNumber(ptr);
       const size2 = wasm2.getFree();
-      wasm.free(ptr);
+      wasm2.free(ptr);
       const size3 = wasm2.getFree();
-      console.log(ptr, size, size2, size3);
-      assert.strictEqual(size2, size - bytes);
-      assert.strictEqual(size, size3);
+      // console.log(this.stack, args[0]);
+      assert.strictEqual(size2, size1 - bytes);
+      assert.strictEqual(size1, size3);
+    });
+    it('callable', function(done) {
+      try {
+        const size = wasm2.getFree();
+        const ptr = wasm2.malloc(size + 64);
+        wasm2.free(ptr);
+      } catch (err) {
+        assert.strictEqual(err.message.indexOf('stack overflow'), 0);
+        done();
+      }
     });
   });
   describe('#heap', function() {
-    it('isFunction', function() {
-      assert.isFunction(wasm.heap);
-    });
     it('default', function() {
       const heap = wasm.heap();
       assert.instanceOf(heap, Int32Array);

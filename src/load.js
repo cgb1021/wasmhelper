@@ -1,11 +1,15 @@
 /*
- * @description: 生成WASM对象
+ * @description: 加载编译wasm资源
  * @param {String|Object} urlOrModule: wasm资源{urlOrModule|WebAssembly.Instance}
  * @param {Null|Object} importObject: {env: {}}
  * @return {Promise<WebAssembly.Instance|WebAssembly.Module>} 传入importObject，返回WebAssembly.Instance，否则返回WebAssembly.Module
  */
 const load = function (urlOrModule, importObject) {
-  if (importObject) {
+  const isModule = urlOrModule instanceof WebAssembly.Module;
+  if (!isModule && (typeof urlOrModule !== 'string' || !/^https?:\/\//.test(urlOrModule))) {
+    throw new Error('no url');
+  }
+  if (isModule || importObject) {
     // instantiate
     if (typeof importObject.env === 'undefined') {
       importObject.env = {};
@@ -27,7 +31,7 @@ const load = function (urlOrModule, importObject) {
         importObject.wasi_snapshot_preview1[key] = () => {};
       }
     });
-    if (urlOrModule instanceof WebAssembly.Module) {
+    if (isModule) {
       return WebAssembly.instantiate(urlOrModule, importObject);
     } else if (typeof WebAssembly.instantiateStreaming === 'function') {
       return WebAssembly.instantiateStreaming(fetch(urlOrModule), importObject);

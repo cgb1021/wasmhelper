@@ -156,6 +156,10 @@ function WASM(instance, importObject) {
     callbacks.forEach(fn => fn.call(this, false));
     callbacks.length = 0;
   };
+  const emitError = (e) => {
+    error = e;
+    errCallbacks.forEach(fn => fn.call(this, e));
+  }
   this.ready = (fn) => {
     if (typeof fn !== 'function') return;
     if (isInit) fn.call(this, true);
@@ -166,16 +170,23 @@ function WASM(instance, importObject) {
     if (error) fn.call(this, error);
     else errCallbacks.push(fn);
   };
-  if (instance instanceof WebAssembly.Instance) {
-    init(instance);
-  } else {
-    load(instance, importObject).then((res) => {
-      this.module = res.module;
-      init(res.instance);
-    }).catch((e) => {
-      error = e;
-      errCallbacks.forEach(fn => fn.call(this, e));
-    });
+  try {
+    if (instance instanceof WebAssembly.Instance) {
+      init(instance);
+    } else {
+      load(instance, importObject).then((res) => {
+        try {
+          this.module = res.module;
+          init(res.instance);
+        } catch (e) {
+          emitError(e);
+        }
+      }).catch((e) => {
+        emitError(e);
+      });
+    }
+  } catch (e) {
+    emitError(e);
   }
 }
 /*
@@ -286,27 +297,18 @@ WASM.prototype.malloc = function (bytes) {
   if (typeof exports.malloc === 'function') {
     ptr = exports.malloc(bytes);
   } else {
-    try {
-      const stack = exports.stackSave();
-      if (bytes > stack) {
-        throw new Error('stack overflow');
-      }
-      if (this.stack === 0) {
-        this.stack = stack;
-      }
-      ptr = exports.stackAlloc(bytes);
-    } catch (e) {
-      console.error(e.message);
+    const stack = exports.stackSave();
+    if (bytes > stack) {
+      const msg = 'stack overflow, '+ bytes +' larger than ' + stack;
+      console.error(msg);
+      throw new Error(msg);
     }
+    if (this.stack === 0) {
+      this.stack = stack;
+    }
+    ptr = exports.stackAlloc(bytes);
   }
   return ptr;
-};
-/*
- * @description: 获取剩余内存数量
- * @return {Number}
- */
-WASM.prototype.getFree = function () {
-  return this.exports.emscripten_stack_get_free();
 };
 /*
  * @description: 释放内存
@@ -323,6 +325,13 @@ WASM.prototype.free = function (...args) {
     exports.stackRestore(this.stack);
     this.stack = 0;
   }
+};
+/*
+ * @description: 获取剩余内存数量
+ * @return {Number}
+ */
+WASM.prototype.getFree = function () {
+  return this.exports.emscripten_stack_get_free();
 };
 /*
  * @description: 获取内存
