@@ -8,7 +8,7 @@ describe('worker.js', function() {
     // runs once before the first test in this block
     document.body.innerHTML = `<script id="worker" type="text/js-worker">
     addEventListener('message', function (e) {
-      if (e.data.type !== 'webassemblyinit') {
+      if (e.data.type !== 'wasminit') {
         // 自动注入wasm对象
         const helloStr = 'hello worker:'
         const counter = wasm.counter();

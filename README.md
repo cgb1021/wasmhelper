@@ -55,7 +55,7 @@ console.log(result);
 // html定义web worker代码
 <script id="worker" type="text/js-worker">
 addEventListener('message', function (e) {
-  if (e.data.type !== 'webassemblyinit') {
+  if (e.data.type !== 'wasminit') {
     // 自动注入wasm对象
     const helloStr = 'hello worker:'
     const counter = wasm.counter();
