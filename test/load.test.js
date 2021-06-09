@@ -26,11 +26,15 @@ describe('load.js', function() {
     load('http://localhost:8080/hello2.wasm').catch(() => done());
   });
   it('fetch instance', function (done) {
+    const instantiateStreaming = WebAssembly.instantiateStreaming;
     delete WebAssembly.instantiateStreaming;
     load('http://localhost:8080/hello.wasm', {}).then(() => done());
+    WebAssembly.instantiateStreaming = instantiateStreaming;
   });
   it('fetch module', function (done) {
+    const compileStreaming = WebAssembly.compileStreaming;
     delete WebAssembly.compileStreaming;
     load('http://localhost:8080/hello.wasm').then(() => done());
+    WebAssembly.compileStreaming = compileStreaming;
   });
 });
