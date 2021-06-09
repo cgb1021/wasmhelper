@@ -108,5 +108,6 @@ function stringToUTF8(str, buffOrArr, outIdx, maxBytesToWrite) {
 export default {
   lengthBytesUTF8,
   stringToUTF8,
-  UTF8ToString
+  UTF8ToString,
+  warnOnce
 };

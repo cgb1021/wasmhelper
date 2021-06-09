@@ -133,8 +133,7 @@ function WASM(instance, importObject) {
   const errCallbacks = [];
   let isInit = false;
   let error = null;
-  const init = ({ exports }) => {
-    if (!exports) throw new Error('no exports');
+  const init = (exports) => {
     isInit = true;
     if (typeof exports.memory === 'object') {
       this.memory = exports.memory;
@@ -159,7 +158,9 @@ function WASM(instance, importObject) {
   const emitError = (e) => {
     error = e;
     errCallbacks.forEach(fn => fn.call(this, e));
-  }
+    errCallbacks.length = 0;
+    utils.warnOnce(e.message);
+  };
   this.ready = (fn) => {
     if (typeof fn !== 'function') return;
     if (isInit) fn.call(this, true);
@@ -172,15 +173,11 @@ function WASM(instance, importObject) {
   };
   try {
     if (instance instanceof WebAssembly.Instance) {
-      init(instance);
+      init(instance.exports);
     } else {
       load(instance, importObject).then((res) => {
-        try {
-          this.module = res.module;
-          init(res.instance);
-        } catch (e) {
-          emitError(e);
-        }
+        this.module = res.module;
+        init(res.instance.exports);
       }).catch((e) => {
         emitError(e);
       });
@@ -300,7 +297,7 @@ WASM.prototype.malloc = function (bytes) {
     const stack = exports.stackSave();
     if (bytes > stack) {
       const msg = 'stack overflow, '+ bytes +' larger than ' + stack;
-      console.error(msg);
+      utils.warnOnce(msg);
       throw new Error(msg);
     }
     if (this.stack === 0) {

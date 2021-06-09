@@ -1,4 +1,4 @@
-import { assert, expect } from 'chai';
+import { assert } from 'chai';
 import create, { load, WASM } from '../es/index';
 const url = 'http://localhost:8080/hello.wasm';
 const wasm = create(url);
@@ -8,26 +8,16 @@ describe('index.js', function() {
     it('instanceOf WASM', function() {
       assert.instanceOf(wasm, WASM);
     });
-    it('has module', function(done) {
+    it('correct', function(done) {
       wasm.ready(function () {
         assert.instanceOf(wasm.module, WebAssembly.Module);
-        done();
-      });
-    });
-    it('has memory', function(done) {
-      wasm.ready(function () {
         assert.instanceOf(wasm.memory, WebAssembly.Memory);
-        done();
-      });
-    });
-    it('has exports', function(done) {
-      wasm.ready(function () {
-        assert.isObject(wasm.exports);
         done();
       });
     });
     it('function in exports', function(done) {
       wasm.ready(function () {
+        assert.isObject(wasm.exports);
         assert.isFunction(wasm.add);
         assert.strictEqual(wasm.add, wasm.exports.add);
         done();
@@ -51,6 +41,13 @@ describe('index.js', function() {
         done();
       });
     });
+    it('from instance', function(done) {
+      load('http://localhost:8080/hello.wasm', {}).then((res) => {
+        const wasm = create(res.instance);
+        assert.strictEqual(res.instance.exports, wasm.exports);
+        done();
+      });
+    });
   });
   describe('#error', function() {
     const wasm = create('http://localhost:8080/memory2.wasm');
@@ -67,17 +64,9 @@ describe('index.js', function() {
         done();
       });
     });
-    it('from instance', function(done) {
-      load('http://localhost:8080/hello.wasm', {}).then((res) => {
-        const wasm = create(res.instance);
-        assert.strictEqual(res.instance.exports, wasm.exports);
-        done();
-      });
-    });
-    it('no exports', function(done) {
-      load('http://localhost:8080/memory.wasm', {}).then((res) => {
-        const wasm = create(res.instance);
-        assert.strictEqual(res.instance.exports, wasm.exports);
+    it('no memory', function(done) {
+      const wasm = create('http://localhost:8080/memory.wasm', {});
+      wasm.error(() => {
         done();
       });
     });
@@ -131,7 +120,7 @@ describe('index.js', function() {
   });
   describe('#mem2str&str2mem', function() {
     it('callable', function () {
-      const helloStr = 'hello worker:';
+      const helloStr = 'hello world【🎉】:';
       const counter = wasm.counter();
       const ptr = wasm.str2mem(helloStr);
       const retPtr = wasm.hello(ptr);
