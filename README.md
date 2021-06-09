@@ -7,21 +7,27 @@ https://webassembly.org/
 安装编译工具：https://emscripten.org/docs/getting_started/downloads.html
 ```
 #默认
-emcc hello.c --no-entry -o ../../data/hello/hello.wasm
+emcc hello.c --no-entry -s "EXPORTED_FUNCTIONS=['_malloc','_free']" -o ./hello.wasm
+
+emcc memory.c -s IMPORTED_MEMORY -s INITIAL_MEMORY=6291456 -s ALLOW_MEMORY_GROWTH=1 -o ./memory.wasm
 
 #定义内存
-emcc hello.c --no-entry -s INITIAL_MEMORY=6291456 -s "EXPORTED_FUNCTIONS=['_malloc','_free']" -o ../../data/hello/hello.wasm
+emcc hello.c --no-entry -s INITIAL_MEMORY=6291456 -s "EXPORTED_FUNCTIONS=['_malloc','_free']" -o ./hello.wasm
 
 #使用WebAssembly.Memory定义内存
-emcc hello.c --no-entry -s IMPORTED_MEMORY -s INITIAL_MEMORY=6291456 -s ALLOW_MEMORY_GROWTH=1 -s "EXPORTED_FUNCTIONS=['_malloc','_free']" -o ../../data/hello/hello.wasm
+emcc hello.c --no-entry -s IMPORTED_MEMORY -s INITIAL_MEMORY=6291456 -s ALLOW_MEMORY_GROWTH=1 -s "EXPORTED_FUNCTIONS=['_malloc','_free']" -o ./hello.wasm
 ```
 
 ## 初始化
 ```
-import wasm from 'wasmhelper';
+import create from 'wasmhelper';
 const url = './hello.wasm';
-const asm = wasm(url, {
-  ready: () => console.log('load wasm ready')
+const asm = create(url);
+asm.ready(() => {
+  console.log('ready');
+})
+asm.error((e) => {
+  console.log(e.message);
 })
 ```
 
@@ -29,16 +35,19 @@ const asm = wasm(url, {
 ```
 /* 使用ccall */
 const helloStr = 'hello world';
-const result = asm.ccall('hello', 'string', [helloStr])
+const fromCStr = asm.ccall('hello', 'string', [helloStr]);
+console.log(fromCStr);
 const arr = [1000,2200,320,61,50128];
 const sum = asm.ccall('reduce', 'number', [arr, arr.length]);
-console.log(sum === arr.reduce((a, b) => a + b))
+console.log(sum === arr.reduce((a, b) => a + b));
 /* 直接调用c函数 */
 const counter = asm.counter();
-const ptr = asm.str2mem(helloStr)
-const retPtr = asm.hello(ptr)
-const result = asm.mem2str(retPtr)
-asm.free(ptr, retPtr)
+console.log(counter);
+const ptr = asm.str2mem(helloStr);
+const retPtr = asm.hello(ptr);
+const result = asm.mem2str(retPtr);
+asm.free(ptr, retPtr);
+console.log(result);
 ```
 
 ## 注入web worker
@@ -47,25 +56,24 @@ asm.free(ptr, retPtr)
 <script id="worker" type="text/js-worker">
 addEventListener('message', function (e) {
   if (e.data.type !== 'webassemblyinit') {
-    // 自动生成并注入WASM对象
+    // 自动注入wasm对象
     const helloStr = 'hello worker:'
     const counter = wasm.counter();
     const ptr = wasm.str2mem(helloStr)
     const retPtr = wasm.hello(ptr)
     const result = wasm.mem2str(retPtr)
     wasm.free(ptr, retPtr)
-    console.log('worker say hello', result) 
+    console.log('worker2 say hello', result) 
   }
 }, false);
 </script>
 
 // index.js
-import { worker as createWorker, load } from 'wasmhelper'
-const Module = await load('./hello.wasm')
-createWorker(Module, '#worker').then(function (worker) {
+import { worker as createWorker, load } from 'wasmhelper';
+createWorker('./hello.wasm', '#worker').then(function (worker) {
   worker.addEventListener('message', (e) => {
     if (e.data.type === 'wasmready') {
-      worker.postMessage('say hello')
+      worker.postMessage('say hello');
     }
   })
 });
