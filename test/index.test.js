@@ -151,19 +151,30 @@ describe('index.js', function() {
   describe('#malloc&free', function() {
     const memory = new WebAssembly.Memory({ initial: 96, maximum: 96 });
     const wasm2 = create('http://localhost:8080/memory.wasm', { env: { memory }});
-    it('callable', function() {
-      const bytes = 64;
+    it('16aligned', function() {
+      const bytes = 32;
       const size1 = wasm2.getFree();
       const ptr = wasm2.malloc(bytes);
       assert.isNumber(ptr);
       const size2 = wasm2.getFree();
       wasm2.free(ptr);
       const size3 = wasm2.getFree();
-      // console.log(this.stack, args[0]);
-      assert.strictEqual(size2, size1 - bytes);
       assert.strictEqual(size1, size3);
+      assert.strictEqual(size2, size1 - bytes);
     });
-    it('callable', function(done) {
+    it('not 16aligned', function() {
+      const bytes = 33;
+      const size1 = wasm2.getFree();
+      const ptr = wasm2.malloc(bytes);
+      const size2 = wasm2.getFree();
+      wasm2.free(ptr);
+      const size3 = wasm2.getFree();
+      const diff = size1 - size2;
+      assert.strictEqual(size1, size3);
+      assert.isAbove(diff, bytes);
+      assert.strictEqual(diff % 16, 0);
+    });
+    it('stack overflow', function(done) {
       try {
         const size = wasm2.getFree();
         const ptr = wasm2.malloc(size + 64);
