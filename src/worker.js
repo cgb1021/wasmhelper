@@ -6,7 +6,8 @@ const scripts = `
 var utils = {
   lengthBytesUTF8,
 	stringToUTF8,
-	UTF8ToString
+	UTF8ToString,
+	warnOnce
 }
 /*{{WASM}}*/
 let _instance = null;
@@ -18,8 +19,23 @@ if (typeof importObject !== 'object') {
 if (typeof importObject.env !== 'object') {
   importObject.env = {}
 }
-importObject.env.emscripten_resize_heap = importObject.env.emscripten_resize_heap || _defaultFn;
-importObject.env.emscripten_memcpy_big = importObject.env.emscripten_memcpy_big || _defaultFn;
+['emscripten_resize_heap',
+  'emscripten_memcpy_big',
+  'emscripten_notify_memory_growth',
+  'emscripten_asm_const_int'
+].forEach(key => {
+  if (typeof importObject.env[key] !== 'function') {
+    importObject.env[key] = _defaultFn;
+  }
+});
+if (typeof importObject.wasi_snapshot_preview1 !== 'object') {
+  importObject.wasi_snapshot_preview1 = {};
+}
+['proc_exit', 'fd_write'].forEach(key => {
+  if (typeof importObject.wasi_snapshot_preview1[key] !== 'function') {
+    importObject.wasi_snapshot_preview1[key] = _defaultFn;
+  }
+});
 let _initWASM = function (e) {
   if (e.data.type === '${type}') {
     WebAssembly.instantiate(e.data.mod, importObject).then(function(instance) {
@@ -95,7 +111,7 @@ function createWorker (urlOrModule, urlOrSelector) {
         resolve(worker);
       }
     };
-    if (/^https?:\/\//.test(urlOrSelector)) {
+    if (/\.js\??/.test(urlOrSelector)) {
       fetch(urlOrSelector)
         .then(response => response.text())
         .then((text) => init(text)).catch(reject);

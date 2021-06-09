@@ -6,7 +6,7 @@
  */
 const load = function (urlOrModule, importObject) {
   const isModule = urlOrModule instanceof WebAssembly.Module;
-  if (!isModule && (typeof urlOrModule !== 'string' || !/^https?:\/\//.test(urlOrModule))) {
+  if (!isModule && (typeof urlOrModule !== 'string' || !/\.wasm\??/.test(urlOrModule))) {
     throw new Error('no url');
   }
   if (isModule || importObject) {
