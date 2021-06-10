@@ -5,10 +5,11 @@ const scripts = `
 /*{{UTILS}}*/
 var utils = {
   lengthBytesUTF8,
-	stringToUTF8,
-	UTF8ToString,
-	warnOnce
-}
+  stringToUTF8,
+  UTF8ToString,
+  convertJsFunctionToWasm,
+  warnOnce
+};
 /*{{WASM}}*/
 let _instance = null;
 var wasm = null;

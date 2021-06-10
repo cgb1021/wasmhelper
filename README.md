@@ -119,6 +119,13 @@ arr2mem (arr, type = 'i32')
  */
 mem2arr (ptr, length, type = 'i32')
 /*
+ * @description: 传递js函数
+ * @param {Function} func: js function
+ * @param {String} sig: v(void) i(32-bit integer) j(64-bit integer) f(32-bit float), d(64-bit float)
+ * @return {Number}
+ */
+fn2wasm (func, sig = 'v')
+/*
  * @description: 分配内存
  * @param {Number} bytes: 字节长度
  * @return {Number}

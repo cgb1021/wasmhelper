@@ -93,6 +93,9 @@ EM_PORT_API(int) getSize()
   return count2;
 }
 
+EM_PORT_API(void) callJSFunc(void(*fp)(void)) {
+  (*fp)();
+}
 EM_PORT_API(int) returnTrue()
 {
   return 1;

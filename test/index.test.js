@@ -185,6 +185,12 @@ describe('index.js', function() {
       }
     });
   });
+  describe('#fn2wasm', function() {
+    it('default', function(done) {
+      const ptr = wasm.fn2wasm(done);
+      wasm.callJSFunc(ptr);
+    });
+  });
   describe('#heap', function() {
     it('default', function() {
       const heap = wasm.heap();

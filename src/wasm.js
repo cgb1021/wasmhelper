@@ -13,12 +13,14 @@ function WASM(instance, importObject) {
   this.exports = null;
   this.memory = null;
   this.module = null;
+  this.table = null;
   this.stack = 0;
 
   const callbacks = [];
   const errCallbacks = [];
   let isInit = false;
   let error = null;
+  let functionsInTableMap = null;
   const init = (exports) => {
     isInit = true;
     if (typeof exports.memory === 'object') {
@@ -38,6 +40,7 @@ function WASM(instance, importObject) {
     this.HEAPF32 = new Float32Array(buf);
     this.HEAPF64 = new Float64Array(buf);
     this.exports = exports;
+    this.table = exports.__indirect_function_table;
     callbacks.forEach(fn => fn.call(this, false));
     callbacks.length = 0;
   };
@@ -56,6 +59,42 @@ function WASM(instance, importObject) {
     if (typeof fn !== 'function') return;
     if (error) fn.call(this, error);
     else errCallbacks.push(fn);
+  };
+  this.fn2wasm = function (func, sig = '') {
+    if (typeof func !== 'function') return 0;
+    if (!sig || typeof sig !== 'string') sig = 'v';
+    if (!functionsInTableMap) {
+      functionsInTableMap = new WeakMap;
+      for (var i = 0; i < this.table.length; i++) {
+        var item = this.table.get(i);
+        if (item) {
+          functionsInTableMap.set(item, i);
+        }
+      }
+    }
+    if (functionsInTableMap.has(func)) {
+      return functionsInTableMap.get(func);
+    }
+    try {
+      this.table.grow(1);
+    } catch (err) {
+      if (!(err instanceof RangeError)) {
+        throw err;
+      }
+      throw 'Unable to grow wasm table. Set ALLOW_TABLE_GROWTH.';
+    }
+    var ret = this.table.length - 1;
+    try {
+      this.table.set(ret, func);
+    } catch (err) {
+      if (!(err instanceof TypeError)) {
+        throw err;
+      }
+      var wrapped = utils.convertJsFunctionToWasm(func, sig);
+      this.table.set(ret, wrapped);
+    }
+    functionsInTableMap.set(func, ret);
+    return ret;
   };
   try {
     if (instance instanceof WebAssembly.Instance) {
@@ -242,11 +281,5 @@ WASM.prototype.heap = function (type = 'i32') {
   }
 };
 /* split_flag */
-/*
- * 慎用
- */
-WASM.prototype.grow = function (num) {
-  return this.memory.grow(num);
-};
 
 export default WASM;

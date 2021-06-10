@@ -1,0 +1,48 @@
+<html>
+  <head>
+    <title>webassembly test</title>
+    <script src="index.js" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <h1>webassembly test</h1>
+    <section>
+      <div id="add_result">123 + 234 = ??</div>
+    </section>
+    <script>
+      var create = wasmhelper.default;
+      var hello = create('hello.wasm');
+      hello.ready(function () {
+        var addResult = document.getElementById('add_result');
+        var addResultVal = addResult.textContent
+        var arr = addResultVal.split('+').map(function (val) {
+          return +val.replace(/[^\d]+/g, '');
+        });
+        addResult.textContent = addResultVal.replace('??', hello.add(arr[0], arr[1]));
+        /* console.log(tbl.get(0)());  // 13
+        console.log(tbl.get(1)());  // 42
+        otherTable.set(0,tbl.get(0));
+        otherTable.set(1,tbl.get(1));
+        console.log(table.get(0)());
+        console.log(table.get(1)()); */
+      });
+      var table = new WebAssembly.Table({ element: "anyfunc", initial: 2, element: 'anyfunc' });
+      var memory = new WebAssembly.Memory({ initial: 96, maximum: 96 });
+      var memWasm = create('memory.wasm', {
+        env: {
+          memory: memory
+        },
+        imports: {
+          imported_func: function(arg) {
+            console.log(arg);
+          }
+        },
+        js: {
+          tbl:table
+        }
+      })
+      memWasm.ready(function () {
+        console.log(memWasm.memory, memWasm.table);
+      })
+    </script>
+  </body>
+</html>
