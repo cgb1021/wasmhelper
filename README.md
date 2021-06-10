@@ -22,12 +22,13 @@ emcc hello.c --no-entry -s IMPORTED_MEMORY -s INITIAL_MEMORY=6291456 -s ALLOW_ME
 ```
 import create from 'wasmhelper';
 const url = './hello.wasm';
-const asm = create(url);
+const asm = create(url, {
+  error((e) => {
+    console.log(e.message);
+  }
+});
 asm.ready(() => {
   console.log('ready');
-})
-asm.error((e) => {
-  console.log(e.message);
 })
 ```
 

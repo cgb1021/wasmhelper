@@ -10,7 +10,7 @@ export { WASM };
 * @param {Null|Object} importObject: {env: {}}
 * @return {Proxy}
 */
-export default function (instance, importObject = {}) {
+export default function (instance, importObject) {
   const asm =  new WASM(instance, importObject);
   return new Proxy(asm, {
     get: (obj, k) => {
@@ -25,6 +25,7 @@ export default function (instance, importObject = {}) {
       const exclude = [
         'exports',
         'memory',
+        'table',
         'HEAP8',
         'HEAP16',
         'HEAP32',

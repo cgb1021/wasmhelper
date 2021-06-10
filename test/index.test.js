@@ -2,6 +2,7 @@ import { assert } from 'chai';
 import create, { load, WASM } from '../es/index';
 const url = 'http://localhost:8080/hello.wasm';
 const wasm = create(url);
+const pSize = 64 * 1024;
 
 describe('index.js', function() {
   describe('#new', function() {
@@ -50,44 +51,44 @@ describe('index.js', function() {
     });
   });
   describe('#error', function() {
-    const wasm = create('http://localhost:8080/memory2.wasm');
     it('before', function(done) {
-      const wasm = create('http://localhost:8080/memory2.wasm');
-      wasm.error((e) => {
-        assert.isString(e.message);
-        done();
-      });
-    });
-    it('after', function(done) {
-      wasm.error((e) => {
-        assert.isString(e.message);
-        done();
+      create('http://localhost:8080/memory2.wasm', {
+        error (e) {
+          assert.isString(e.message);
+          done();
+        }
       });
     });
     it('no memory', function(done) {
-      const wasm = create('http://localhost:8080/memory.wasm', {});
-      wasm.error(() => {
-        done();
+      create('http://localhost:8080/memory.wasm', {
+        error (e) {
+          assert.isString(e.message);
+          done();
+        }
       });
     });
     it('no url', function(done) {
-      const wasm = create('no url');
-      wasm.error(() => done());
+      create('no url', {
+        error (e) {
+          assert.isString(e.message);
+          done();
+        }
+      });
     });
   });
   describe('#ready', function() {
     it('before init', function(done) {
-      const wasm2 = create(url);
-      wasm2.ready(function (isInit) {
-        assert.isFalse(isInit);
+      const wasm2 = create(url, null);
+      const b = wasm2.ready(function () {
         done();
       });
+      assert.isFalse(b);
     });
-    it('after init', function(done) {
-      wasm.ready(function (isInit) {
-        assert.isTrue(isInit);
-        done();
+    it('after init', function() {
+      const b = wasm.ready(function () {
+        assert.strictEqual(arguments.length, 0);
       });
+      assert.isTrue(b);
     });
     it('call this', function(done) {
       wasm.ready(function () {
@@ -149,8 +150,11 @@ describe('index.js', function() {
     });
   });
   describe('#malloc&free', function() {
-    const memory = new WebAssembly.Memory({ initial: 96, maximum: 96 });
-    const wasm2 = create('http://localhost:8080/memory.wasm', { env: { memory }});
+    const memory = new WebAssembly.Memory({ initial: 128, maximum: 128 });
+    const wasm2 = create('http://localhost:8080/memory.wasm', { INITIAL_MEMORY: 96, env: { memory }});
+    it('env.memory first', function() {
+      assert.strictEqual(wasm2.memory.buffer.byteLength / pSize, 128);
+    });
     it('16aligned', function() {
       const bytes = 32;
       const size1 = wasm2.getFree();
@@ -187,8 +191,23 @@ describe('index.js', function() {
   });
   describe('#fn2wasm', function() {
     it('default', function(done) {
-      const ptr = wasm.fn2wasm(done);
-      wasm.callJSFunc(ptr);
+      wasm.ready(() => {
+        const ptr = wasm.fn2wasm(done);
+        const ptr2 = wasm.fn2wasm(done);
+        assert.strictEqual(ptr, ptr2);
+        wasm.callJSFunc(ptr);
+      });
+    });
+    it('ALLOW_TABLE_GROWTH', function(done) {
+      const wasm = create('http://localhost:8080/memory.wasm', { INITIAL_MEMORY: 96 });
+      wasm.ready(() => {
+        assert.strictEqual(wasm.memory.buffer.byteLength / pSize, 96);
+        try {
+          wasm.fn2wasm(function name() {});
+        } catch(e) {
+          done();
+        }
+      });
     });
   });
   describe('#heap', function() {

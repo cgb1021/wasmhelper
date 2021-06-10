@@ -18,6 +18,10 @@
           return +val.replace(/[^\d]+/g, '');
         });
         addResult.textContent = addResultVal.replace('??', hello.add(arr[0], arr[1]));
+        const ptr = hello.fn2wasm(function () {
+          console.log('wasm.callJSFunc(ptr)');
+        });
+        hello.callJSFunc(ptr);
         /* console.log(tbl.get(0)());  // 13
         console.log(tbl.get(1)());  // 42
         otherTable.set(0,tbl.get(0));

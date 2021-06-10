@@ -169,7 +169,7 @@ var utils = {
   warnOnce
 };
 
-function WASM(instance, importObject) {
+function WASM(instance, importObject = {}) {
   this.HEAP8 = null;
   this.HEAP16 = null;
   this.HEAP32 = null;
@@ -185,9 +185,8 @@ function WASM(instance, importObject) {
   this.stack = 0;
 
   const callbacks = [];
-  const errCallbacks = [];
+  const error = importObject && typeof importObject.error === 'function' ? importObject.error : null;
   let isInit = false;
-  let error = null;
   let functionsInTableMap = null;
   const init = (exports) => {
     isInit = true;
@@ -209,24 +208,21 @@ function WASM(instance, importObject) {
     this.HEAPF64 = new Float64Array(buf);
     this.exports = exports;
     this.table = exports.__indirect_function_table;
-    callbacks.forEach(fn => fn.call(this, false));
+    callbacks.forEach(fn => fn.call(this));
     callbacks.length = 0;
   };
   const emitError = (e) => {
-    error = e;
-    errCallbacks.forEach(fn => fn.call(this, e));
-    errCallbacks.length = 0;
     utils.warnOnce(e.message);
+    if (error) {
+      error(e);
+    }
   };
   this.ready = (fn) => {
-    if (typeof fn !== 'function') return;
-    if (isInit) fn.call(this, true);
-    else callbacks.push(fn);
-  };
-  this.error = (fn) => {
-    if (typeof fn !== 'function') return;
-    if (error) fn.call(this, error);
-    else errCallbacks.push(fn);
+    if (typeof fn === 'function') {
+      if (isInit) fn.call(this);
+      else callbacks.push(fn);
+    }
+    return isInit;
   };
   this.fn2wasm = function (func, sig = '') {
     if (typeof func !== 'function') return 0;
@@ -249,7 +245,9 @@ function WASM(instance, importObject) {
       if (!(err instanceof RangeError)) {
         throw err;
       }
-      throw 'Unable to grow wasm table. Set ALLOW_TABLE_GROWTH.';
+      const msg = 'Unable to grow wasm table. Set ALLOW_TABLE_GROWTH.';
+      utils.warnOnce(msg);
+      throw msg;
     }
     var ret = this.table.length - 1;
     try {
@@ -268,6 +266,16 @@ function WASM(instance, importObject) {
     if (instance instanceof WebAssembly.Instance) {
       init(instance.exports);
     } else {
+      if (typeof importObject !== 'object' || !importObject) {
+        importObject = {};
+      }
+      if (typeof importObject.INITIAL_MEMORY === 'number' && (!importObject.env || !importObject.env.memory)) {
+        if (typeof importObject.env !== 'object') importObject.env = {};
+        importObject.env.memory = new WebAssembly.Memory({
+          initial: importObject.INITIAL_MEMORY,
+          maximum: typeof importObject.MAXIMUM_MEMORY === 'number' ? importObject.MAXIMUM_MEMORY : importObject.INITIAL_MEMORY
+        });
+      }
       load(instance, importObject).then((res) => {
         this.module = res.module;
         init(res.instance.exports);
