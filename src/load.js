@@ -11,6 +11,7 @@ const load = function (urlOrModule, importObject) {
   }
   if (isModule || importObject) {
     // instantiate
+    /* gulp_split */
     if (typeof importObject.env === 'undefined') {
       importObject.env = {};
     }
@@ -31,6 +32,13 @@ const load = function (urlOrModule, importObject) {
         importObject.wasi_snapshot_preview1[key] = () => {};
       }
     });
+    if (typeof importObject.INITIAL_MEMORY === 'number' && !importObject.env.memory) {
+      importObject.env.memory = new WebAssembly.Memory({
+        initial: importObject.INITIAL_MEMORY,
+        maximum: typeof importObject.MAXIMUM_MEMORY === 'number' ? importObject.MAXIMUM_MEMORY : importObject.INITIAL_MEMORY
+      });
+    }
+    /* gulp_split */
     if (isModule) {
       return WebAssembly.instantiate(urlOrModule, importObject);
     } else if (typeof WebAssembly.instantiateStreaming === 'function') {

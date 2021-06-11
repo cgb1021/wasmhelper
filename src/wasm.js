@@ -1,6 +1,6 @@
 import load from './load';
 import utils from './utils';
-/* split_flag */
+/* gulp_split */
 function WASM(instance, importObject = {}) {
   this.HEAP8 = null;
   this.HEAP16 = null;
@@ -100,13 +100,6 @@ function WASM(instance, importObject = {}) {
     } else {
       if (typeof importObject !== 'object' || !importObject) {
         importObject = {};
-      }
-      if (typeof importObject.INITIAL_MEMORY === 'number' && (!importObject.env || !importObject.env.memory)) {
-        if (typeof importObject.env !== 'object') importObject.env = {};
-        importObject.env.memory = new WebAssembly.Memory({
-          initial: importObject.INITIAL_MEMORY,
-          maximum: typeof importObject.MAXIMUM_MEMORY === 'number' ? importObject.MAXIMUM_MEMORY : importObject.INITIAL_MEMORY
-        });
       }
       load(instance, importObject).then((res) => {
         this.module = res.module;
@@ -288,6 +281,6 @@ WASM.prototype.heap = function (type = 'i32') {
     return this.HEAP32;
   }
 };
-/* split_flag */
+/* gulp_split */
 
 export default WASM;

@@ -156,7 +156,6 @@ function convertJsFunctionToWasm(func, sig) {
   var wrappedFunc = instance.exports['f'];
   return wrappedFunc;
 }
-/* split_flag */
 export default {
   lengthBytesUTF8,
   stringToUTF8,

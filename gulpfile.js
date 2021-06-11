@@ -5,6 +5,7 @@ const babel = require('gulp-babel');
 const uglify = require('gulp-uglify');
 const replace = require('gulp-replace');
 const fs = require('fs');
+const UglifyJS = require('uglify-js');
 // const path = require("path")
 // const util = require('gulp-util')
 // ===================================
@@ -18,14 +19,26 @@ gulp.task('clean', function (cb) {
 });
 gulp.task('replace', () => {
   return gulp.src('./src/**/*')
-    .pipe(replace(/\/\*\{\{(UTILS|WASM)\}\}\*\//g, function(match, p1) {
+    .pipe(replace(/\/\*\{\{(UTILS|WASM|LOAD|INDEX)\}\}\*\//g, function(match, p1) {
       const replaceIndex = {
         UTILS: 0,
-        WASM: 1
+        WASM: 1,
+        LOAD: 1,
+        INDEX: 1
       };
-      const text = fs.readFileSync(`./src/${p1.toLowerCase()}.js`);
-      const arr = text.toString().split('/* split_flag */');
-      return arr[replaceIndex[p1]];
+      const text = fs.readFileSync(`./src/${p1.replace(/_.+$/g, '').toLowerCase()}.js`);
+      const arr = text.toString().split('/* gulp_split */');
+      let code = '';
+      if (p1 === 'UTILS') {
+        code = arr[replaceIndex[p1]].replace('export default', 'var utils =');
+      } else if (p1 === 'INDEX') {
+        return arr[replaceIndex[p1]];
+      } else {
+        code = arr[replaceIndex[p1]];
+      }
+      return UglifyJS.minify(code, {
+        keep_fnames: true
+      }).code;
     }))
     .pipe(gulp.dest('./temp'));
 });

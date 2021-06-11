@@ -7,10 +7,27 @@
     <h1>webassembly test</h1>
     <section>
       <div id="add_result">123 + 234 = ??</div>
+      <div>worker print text: <span id="worker_print">??</span> <a href="#" id="call_worker">call worker</a></div>
     </section>
+    <script id="worker" type="text/js-worker">
+      addEventListener('message', function (e) {
+        if (e.data.type !== 'wasminit') {
+          // 自动注入wasm对象
+          const helloStr = 'hello worker:'
+          const counter = wasm.counter();
+          const ptr = wasm.str2mem(helloStr)
+          const retPtr = wasm.hello(ptr)
+          const result = wasm.mem2str(retPtr)
+          wasm.free(ptr, retPtr)
+          console.log('worker say', result)
+          postMessage(result);
+        }
+      }, false);
+      </script>
     <script>
+      var url = 'hello.wasm';
       var create = wasmhelper.default;
-      var hello = create('hello.wasm');
+      var hello = create(url);
       hello.ready(function () {
         var addResult = document.getElementById('add_result');
         var addResultVal = addResult.textContent
@@ -47,6 +64,23 @@
       memWasm.ready(function () {
         console.log(memWasm.memory, memWasm.table);
       })
+      var createWorker = wasmhelper.worker;
+      hello.ready(function () {
+        createWorker(hello.module, '#worker').then(function (worker) {
+          worker.addEventListener('message', (e) => {
+            if (e.data.type === 'wasmready') {
+              worker.postMessage('say hello')
+            } else {
+              document.getElementById('worker_print').textContent = e.data
+            }
+          })
+          document.getElementById('call_worker').addEventListener('click', function(e) {
+            e.stopPropagation();
+            e.preventDefault;
+            worker.postMessage('say hello2');
+          })
+        });
+      });
     </script>
   </body>
 </html>

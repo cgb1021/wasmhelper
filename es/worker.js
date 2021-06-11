@@ -2,525 +2,49 @@ import load from './load';
 
 const type = 'wasminit';
 const scripts = `
-const UTF8Decoder = typeof TextDecoder !== 'undefined' ? new TextDecoder('utf8') : undefined;
-const err = console.warn.bind(console);
-function warnOnce(text) {
-  if (!warnOnce.shown) warnOnce.shown = {};
-  if (!warnOnce.shown[text]) {
-    warnOnce.shown[text] = 1;
-    err(text);
-  }
-}
-function lengthBytesUTF8(str) {
-  var len = 0;
-  for (let i = 0; i < str.length; ++i) {
-    var u = str.charCodeAt(i);
-    if (u >= 55296 && u <= 57343) u = 65536 + ((u & 1023) << 10) | str.charCodeAt(++i) & 1023;
-    if (u <= 127) ++len;
-    else if (u <= 2047) len += 2;
-    else if (u <= 65535) len += 3;
-    else len += 4;
-  }
-  return len;
-}
-/*
- * @description: c字符数组转js字符串
- * @param {TpyeArray|ArrayBuffer} buffOrArr: 
- * @param {Number} idx: 开始地址
- * @param {Number} maxBytesToRead: 读取数量（可选）
- */
-function UTF8ToString(buffOrArr, idx, maxBytesToRead) {
-  const heap = buffOrArr instanceof ArrayBuffer ? new Uint8Array(buffOrArr) : buffOrArr;
-  var endIdx = idx + maxBytesToRead;
-  var endPtr = idx;
-  while (heap[endPtr] && !(endPtr >= endIdx)) ++endPtr;
-  if (endPtr - idx > 16 && heap.subarray && UTF8Decoder) {
-    return UTF8Decoder.decode(heap.subarray(idx, endPtr));
-  } else {
-    var str = '';
-    while (idx < endPtr) {
-      var u0 = heap[idx++];
-      if (!(u0 & 128)) {
-        str += String.fromCharCode(u0);
-        continue;
-      }
-      var u1 = heap[idx++] & 63;
-      if ((u0 & 224) == 192) {
-        str += String.fromCharCode((u0 & 31) << 6 | u1);
-        continue;
-      }
-      var u2 = heap[idx++] & 63;
-      if ((u0 & 240) == 224) {
-        u0 = (u0 & 15) << 12 | u1 << 6 | u2;
-      } else {
-        if ((u0 & 248) != 240) warnOnce('Invalid UTF-8 leading byte 0x' + u0.toString(16) + ' encountered when deserializing a UTF-8 string in wasm memory to a JS string!');
-        u0 = (u0 & 7) << 18 | u1 << 12 | u2 << 6 | heap[idx++] & 63;
-      }
-      if (u0 < 65536) {
-        str += String.fromCharCode(u0);
-      } else {
-        var ch = u0 - 65536;
-        str += String.fromCharCode(55296 | ch >> 10, 56320 | ch & 1023);
-      }
-    }
-  }
-  return str;
-}
-/*
- * @description: c字符数组转js字符串
- * @param {String} buffOrArr: 
- * @param {TpyeArray|ArrayBuffer} heap: 
- * @param {Number} outIdx: 开始地址
- * @param {Number} maxBytesToWrite: 
- */
-function stringToUTF8(str, buffOrArr, outIdx, maxBytesToWrite) {
-  if (!(maxBytesToWrite > 0)) return 0;
-  const heap = buffOrArr instanceof ArrayBuffer ? new Uint8Array(buffOrArr) : buffOrArr;
-  var startIdx = outIdx;
-  var endIdx = outIdx + maxBytesToWrite;
-  for (var i = 0; i < str.length; ++i) {
-    var u = str.charCodeAt(i);
-    if (u >= 55296 && u <= 57343) {
-      var u1 = str.charCodeAt(++i);
-      u = 65536 + ((u & 1023) << 10) | u1 & 1023;
-    }
-    if (u <= 127) {
-      if (outIdx >= endIdx) break;
-      heap[outIdx++] = u;
-    } else if (u <= 2047) {
-      if (outIdx + 1 >= endIdx) break;
-      heap[outIdx++] = 192 | u >> 6;
-      heap[outIdx++] = 128 | u & 63;
-    } else if (u <= 65535) {
-      if (outIdx + 2 >= endIdx) break;
-      heap[outIdx++] = 224 | u >> 12;
-      heap[outIdx++] = 128 | u >> 6 & 63;
-      heap[outIdx++] = 128 | u & 63;
-    } else {
-      if (outIdx + 3 >= endIdx) break;
-      if (u >= 2097152) warnOnce('Invalid Unicode code point 0x' + u.toString(16) + ' encountered when serializing a JS string to a UTF-8 string in wasm memory! (Valid unicode code points should be in range 0-0x1FFFFF).');
-      heap[outIdx++] = 240 | u >> 18;
-      heap[outIdx++] = 128 | u >> 12 & 63;
-      heap[outIdx++] = 128 | u >> 6 & 63;
-      heap[outIdx++] = 128 | u & 63;
-    }
-  }
-  heap[outIdx] = 0;
-  return outIdx - startIdx;
-}
-/*
- * @description: c字符数组转js字符串
- * @param {Function} func: 
- * @param {String} sig: 'v': void type, 'i': 32-bit integer type, 'j': 64-bit integer type (currently does not exist in JavaScript), 'f': 32-bit float type, 'd': 64
- * @return {Function} 
- */
-function convertJsFunctionToWasm(func, sig) {
-  if (typeof WebAssembly.Function === 'function') {
-    var typeNames = {
-      'i': 'i32',
-      'j': 'i64',
-      'f': 'f32',
-      'd': 'f64'
-    };
-    var type = {
-      parameters: [],
-      results: sig[0] == 'v' ? [] : [typeNames[sig[0]]]
-    };
-    for (let i = 1; i < sig.length; ++i) {
-      type.parameters.push(typeNames[sig[i]]);
-    }
-    return new WebAssembly.Function(type, func);
-  }
-  var typeSection = [1, 0, 1, 96];
-  var sigRet = sig.slice(0, 1);
-  var sigParam = sig.slice(1);
-  var typeCodes = {
-    'i': 127,
-    'j': 126,
-    'f': 125,
-    'd': 124
-  };
-  typeSection.push(sigParam.length);
-  for (let i = 0; i < sigParam.length; ++i) {
-    typeSection.push(typeCodes[sigParam[i]]);
-  }
-  if (sigRet == 'v') {
-    typeSection.push(0);
-  } else {
-    typeSection = typeSection.concat([1, typeCodes[sigRet]]);
-  }
-  typeSection[1] = typeSection.length - 2;
-  var bytes = new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0].concat(typeSection, [2, 7, 1, 1, 101, 1, 102, 0, 0, 7, 5, 1, 1, 102, 0, 0]));
-  var module = new WebAssembly.Module(bytes);
-  var instance = new WebAssembly.Instance(module, {
-    'e': {
-      'f': func
-    }
-  });
-  var wrappedFunc = instance.exports['f'];
-  return wrappedFunc;
-}
-
-var utils = {
-  lengthBytesUTF8,
-  stringToUTF8,
-  UTF8ToString,
-  convertJsFunctionToWasm,
-  warnOnce
-};
-
-function WASM(instance, importObject = {}) {
-  this.HEAP8 = null;
-  this.HEAP16 = null;
-  this.HEAP32 = null;
-  this.HEAPU8 = null;
-  this.HEAPU16 = null;
-  this.HEAPU32 = null;
-  this.HEAPF32 = null;
-  this.HEAPF64 = null;
-  this.exports = null;
-  this.memory = null;
-  this.module = null;
-  this.table = null;
-  this.stack = 0;
-
-  const callbacks = [];
-  const error = importObject && typeof importObject.error === 'function' ? importObject.error : null;
-  let isInit = false;
-  let functionsInTableMap = null;
-  const init = (exports) => {
-    isInit = true;
-    if (typeof exports.memory === 'object') {
-      this.memory = exports.memory;
-    } else if (typeof importObject.env.memory === 'object') {
-      this.memory = importObject.env.memory;
-    } else {
-      throw new Error('no memory buffer');
-    }
-    const buf = this.memory.buffer;
-    this.HEAP8 = new Int8Array(buf);
-    this.HEAP16 = new Int16Array(buf);
-    this.HEAP32 = new Int32Array(buf);
-    this.HEAPU8 = new Uint8Array(buf);
-    this.HEAPU16 = new Uint16Array(buf);
-    this.HEAPU32 = new Uint32Array(buf);
-    this.HEAPF32 = new Float32Array(buf);
-    this.HEAPF64 = new Float64Array(buf);
-    this.exports = exports;
-    this.table = exports.__indirect_function_table;
-    callbacks.forEach(fn => fn.call(this));
-    callbacks.length = 0;
-  };
-  const emitError = (e) => {
-    utils.warnOnce(e.message);
-    if (error) {
-      error(e);
-    }
-  };
-  this.ready = (fn) => {
-    if (typeof fn === 'function') {
-      if (isInit) fn.call(this);
-      else callbacks.push(fn);
-    }
-    return isInit;
-  };
-  this.fn2wasm = function (func, sig = '') {
-    if (typeof func !== 'function') return 0;
-    if (!sig || typeof sig !== 'string') sig = 'v';
-    if (!functionsInTableMap) {
-      functionsInTableMap = new WeakMap;
-      for (var i = 0; i < this.table.length; i++) {
-        var item = this.table.get(i);
-        if (item) {
-          functionsInTableMap.set(item, i);
-        }
-      }
-    }
-    if (functionsInTableMap.has(func)) {
-      return functionsInTableMap.get(func);
-    }
-    try {
-      this.table.grow(1);
-    } catch (err) {
-      if (!(err instanceof RangeError)) {
-        throw err;
-      }
-      const msg = 'Unable to grow wasm table. Set ALLOW_TABLE_GROWTH.';
-      utils.warnOnce(msg);
-      throw msg;
-    }
-    var ret = this.table.length - 1;
-    try {
-      this.table.set(ret, func);
-    } catch (err) {
-      if (!(err instanceof TypeError)) {
-        throw err;
-      }
-      var wrapped = utils.convertJsFunctionToWasm(func, sig);
-      this.table.set(ret, wrapped);
-    }
-    functionsInTableMap.set(func, ret);
-    return ret;
-  };
-  try {
-    if (instance instanceof WebAssembly.Instance) {
-      init(instance.exports);
-    } else {
-      if (typeof importObject !== 'object' || !importObject) {
-        importObject = {};
-      }
-      if (typeof importObject.INITIAL_MEMORY === 'number' && (!importObject.env || !importObject.env.memory)) {
-        if (typeof importObject.env !== 'object') importObject.env = {};
-        importObject.env.memory = new WebAssembly.Memory({
-          initial: importObject.INITIAL_MEMORY,
-          maximum: typeof importObject.MAXIMUM_MEMORY === 'number' ? importObject.MAXIMUM_MEMORY : importObject.INITIAL_MEMORY
-        });
-      }
-      load(instance, importObject).then((res) => {
-        this.module = res.module;
-        init(res.instance.exports);
-      }).catch((e) => {
-        emitError(e);
-      });
-    }
-  } catch (e) {
-    emitError(e);
-  }
-}
-/*
- * @description: 调用c函数
- * @param {String} ident: c函数名称
- * @param {String} returnType: 返回值类型{string|number|boolean|null}
- * @param {Array} args: 参数数组
- * @return {Any}
- */
-WASM.prototype.ccall = function (ident, returnType, args) {
-  const exports = this.exports;
-  const self = this;
-  var toC = {
-    'string': function (str) {
-      var ret = 0;
-      if (str !== null && str !== undefined && str !== 0) {
-        var len = (str.length << 2) + 1;
-        ret = exports.stackAlloc(len);
-        utils.stringToUTF8(str, self.HEAPU8, ret, len);
-      }
-      return ret;
-    },
-    'array': function (arr) {
-      const bytes = self.HEAP32.BYTES_PER_ELEMENT;
-      var ret = exports.stackAlloc(arr.length * bytes);
-      self.HEAP32.set(arr, ret / bytes);
-      return ret;
-    }
-  };
-
-  function convertReturnValue(ret) {
-    if (returnType === 'string') return utils.UTF8ToString(self.HEAPU8, ret);
-    if (returnType === 'boolean') return Boolean(ret);
-    return ret;
-  }
-  var cArgs = [];
-  var stack = 0;
-  if (args) {
-    for (var i = 0; i < args.length; i++) {
-      const type = Array.isArray(args[i]) ? 'array' : typeof args[i];
-      var converter = toC[type];
-      if (converter) {
-        if (stack === 0) stack = exports.stackSave();
-        cArgs[i] = converter(args[i]);
-      } else {
-        cArgs[i] = args[i];
-      }
-    }
-  }
-  var ret = exports[ident].apply(null, cArgs);
-  ret = convertReturnValue(ret);
-  if (stack !== 0) exports.stackRestore(stack);
-  return ret;
-};
-/*
- * @description: 从内存获取字符串
- * @param {Number} ptr: buffer offset
- * @param {Number} size: 字符串长度（可选）
- * @return {String}
- */
-WASM.prototype.mem2str = function (ptr, size) {
-  return utils.UTF8ToString(this.HEAPU8, ptr, size);
-};
-/*
- * @description: 把字符串放入内存
- * @param {String} str: 字符串
- * @return {Number} buffer offset
- */
-WASM.prototype.str2mem = function (str) {
-  const size = utils.lengthBytesUTF8(str);
-  const ptr = this.malloc(size + 1);
-  utils.stringToUTF8(str, this.HEAPU8, ptr, size);
-  return ptr;
-};
-/*
- * @description: 把数组放入内存
- * @param {Array} arr: 数组
- * @param {String} type: 类型（可选）
- * @return {Number} buffer offset
- */
-WASM.prototype.arr2mem = function (arr, type = 'i32') {
-  const heap = this.heap(type);
-  const bytes = heap.BYTES_PER_ELEMENT;
-  const ptr = this.malloc(arr.length * bytes);
-  heap.set(arr, ptr / bytes);
-  return ptr;
-};
-/*
- * @description: 从内存读取数组
- * @param {Number} ptr: buffer offset
- * @param {Number} length: 读取长度
- * @param {String} type: 类型（可选）
- * @return {Array}
- */
-WASM.prototype.mem2arr = function (ptr, length, type = 'i32') {
-  const heap = this.heap(type);
-  const pos = ptr / heap.BYTES_PER_ELEMENT;
-  return Array.from(heap.subarray(pos, pos + length));
-};
-/*
- * @description: 分配内存
- * @param {Number} bytes: 字节长度
- * @return {Number}
- */
-WASM.prototype.malloc = function (bytes) {
-  const exports = this.exports;
-  let ptr = 0;
-  if (typeof exports.malloc === 'function') {
-    ptr = exports.malloc(bytes);
-  } else {
-    const stack = exports.stackSave();
-    if (bytes > stack) {
-      const msg = 'stack overflow, '+ bytes +' larger than ' + stack;
-      utils.warnOnce(msg);
-      throw new Error(msg);
-    }
-    if (this.stack === 0) {
-      this.stack = stack;
-    }
-    ptr = exports.stackAlloc(bytes);
-  }
-  return ptr;
-};
-/*
- * @description: 释放内存
- * @param {...Number} args: buffer offset
- */
-WASM.prototype.free = function (...args) {
-  const exports = this.exports;
-  if (typeof exports.free === 'function') {
-    args.forEach((ptr) => {
-      exports.free(ptr);
-    });
-  }
-  if (this.stack) {
-    exports.stackRestore(this.stack);
-    this.stack = 0;
-  }
-};
-/*
- * @description: 获取剩余内存数量
- * @return {Number}
- */
-WASM.prototype.getFree = function () {
-  return this.exports.emscripten_stack_get_free();
-};
-/*
- * @description: 获取内存
- * @param {String} type: i32:HEAP32,i8:HEAP8,i16:HEAP16,u8:HEAPU8,u16:HEAPU16,u32:HEAPU32,float:HEAPF32,double:HEAPF64
- * @return {TypeArray}
- */
-WASM.prototype.heap = function (type = 'i32') {
-  switch (type) {
-  case 'i8':
-    return this.HEAP8;
-  case 'i16':
-    return this.HEAP16;
-  case 'u8':
-    return this.HEAPU8;
-  case 'u16':
-    return this.HEAPU16;
-  case 'u32':
-    return this.HEAPU32;
-  case 'float':
-    return this.HEAPF32;
-  case 'double':
-    return this.HEAPF64;
-  default:
-    return this.HEAP32;
-  }
-};
-
+const UTF8Decoder="undefined"!=typeof TextDecoder?new TextDecoder("utf8"):void 0,err=console.warn.bind(console);function warnOnce(e){warnOnce.shown||(warnOnce.shown={}),warnOnce.shown[e]||(warnOnce.shown[e]=1,err(e))}function lengthBytesUTF8(n){var r=0;for(let e=0;e<n.length;++e){var t=n.charCodeAt(e);(t=55296<=t&&t<=57343?65536+((1023&t)<<10)|1023&n.charCodeAt(++e):t)<=127?++r:r+=t<=2047?2:t<=65535?3:4}return r}function UTF8ToString(e,n,r){const t=e instanceof ArrayBuffer?new Uint8Array(e):e;for(var o=n+r,i=n;t[i]&&!(o<=i);)++i;if(16<i-n&&t.subarray&&UTF8Decoder)return UTF8Decoder.decode(t.subarray(n,i));for(var a="";n<i;){var s,c,f=t[n++];128&f?(s=63&t[n++],192!=(224&f)?(c=63&t[n++],(f=224==(240&f)?(15&f)<<12|s<<6|c:(240!=(248&f)&&warnOnce("Invalid UTF-8 leading byte 0x"+f.toString(16)+" encountered when deserializing a UTF-8 string in wasm memory to a JS string!"),(7&f)<<18|s<<12|c<<6|63&t[n++]))<65536?a+=String.fromCharCode(f):(c=f-65536,a+=String.fromCharCode(55296|c>>10,56320|1023&c))):a+=String.fromCharCode((31&f)<<6|s)):a+=String.fromCharCode(f)}return a}function stringToUTF8(e,n,r,t){if(!(0<t))return 0;const o=n instanceof ArrayBuffer?new Uint8Array(n):n;for(var n=r,i=r+t,a=0;a<e.length;++a){var s=e.charCodeAt(a);if((s=55296<=s&&s<=57343?65536+((1023&s)<<10)|1023&e.charCodeAt(++a):s)<=127){if(i<=r)break;o[r++]=s}else if(s<=2047){if(i<=r+1)break;o[r++]=192|s>>6,o[r++]=128|63&s}else if(s<=65535){if(i<=r+2)break;o[r++]=224|s>>12,o[r++]=128|s>>6&63,o[r++]=128|63&s}else{if(i<=r+3)break;2097152<=s&&warnOnce("Invalid Unicode code point 0x"+s.toString(16)+" encountered when serializing a JS string to a UTF-8 string in wasm memory! (Valid unicode code points should be in range 0-0x1FFFFF)."),o[r++]=240|s>>18,o[r++]=128|s>>12&63,o[r++]=128|s>>6&63,o[r++]=128|63&s}}return o[r]=0,r-n}function convertJsFunctionToWasm(e,n){if("function"==typeof WebAssembly.Function){var r={i:"i32",j:"i64",f:"f32",d:"f64"},t={parameters:[],results:"v"==n[0]?[]:[r[n[0]]]};for(let e=1;e<n.length;++e)t.parameters.push(r[n[e]]);return new WebAssembly.Function(t,e)}var o=[1,0,1,96],i=n.slice(0,1),a=n.slice(1),s={i:127,j:126,f:125,d:124};o.push(a.length);for(let e=0;e<a.length;++e)o.push(s[a[e]]);"v"==i?o.push(0):o=o.concat([1,s[i]]),o[1]=o.length-2;i=new Uint8Array([0,97,115,109,1,0,0,0].concat(o,[2,7,1,1,101,1,102,0,0,7,5,1,1,102,0,0])),i=new WebAssembly.Module(i);return new WebAssembly.Instance(i,{e:{f:e}}).exports.f}var utils={lengthBytesUTF8:lengthBytesUTF8,stringToUTF8:stringToUTF8,UTF8ToString:UTF8ToString,convertJsFunctionToWasm:convertJsFunctionToWasm,warnOnce:warnOnce};
+function WASM(t,r={}){this.HEAP8=null,this.HEAP16=null,this.HEAP32=null,this.HEAPU8=null,this.HEAPU16=null,this.HEAPU32=null,this.HEAPF32=null,this.HEAPF64=null,this.exports=null,this.memory=null,this.module=null,this.table=null,this.stack=0;const n=[],e=r&&"function"==typeof r.error?r.error:null;let s=!1,o=null;const i=t=>{if(s=!0,"object"==typeof t.memory)this.memory=t.memory;else{if("object"!=typeof r.env.memory)throw new Error("no memory buffer");this.memory=r.env.memory}var e=this.memory.buffer;this.HEAP8=new Int8Array(e),this.HEAP16=new Int16Array(e),this.HEAP32=new Int32Array(e),this.HEAPU8=new Uint8Array(e),this.HEAPU16=new Uint16Array(e),this.HEAPU32=new Uint32Array(e),this.HEAPF32=new Float32Array(e),this.HEAPF64=new Float64Array(e),this.exports=t,this.table=t.__indirect_function_table,n.forEach(t=>t.call(this)),n.length=0},a=t=>{utils.warnOnce(t.message),e&&e(t)};this.ready=t=>("function"==typeof t&&(s?t.call(this):n.push(t)),s),this.fn2wasm=function(e,r=""){if("function"!=typeof e)return 0;if(r&&"string"==typeof r||(r="v"),!o){o=new WeakMap;for(var t=0;t<this.table.length;t++){var n=this.table.get(t);n&&o.set(n,t)}}if(o.has(e))return o.get(e);try{this.table.grow(1)}catch(t){if(!(t instanceof RangeError))throw t;var s="Unable to grow wasm table. Set ALLOW_TABLE_GROWTH.";throw utils.warnOnce(s),s}s=this.table.length-1;try{this.table.set(s,e)}catch(t){if(!(t instanceof TypeError))throw t;r=utils.convertJsFunctionToWasm(e,r);this.table.set(s,r)}return o.set(e,s),s};try{t instanceof WebAssembly.Instance?i(t.exports):("object"==typeof r&&r||(r={}),load(t,r).then(t=>{this.module=t.module,i(t.instance.exports)}).catch(t=>{a(t)}))}catch(t){a(t)}}WASM.prototype.ccall=function(t,e,r){const n=this.exports,s=this;var o={string:function(t){var e,r=0;return null!=t&&0!==t&&(e=1+(t.length<<2),r=n.stackAlloc(e),utils.stringToUTF8(t,s.HEAPU8,r,e)),r},array:function(t){var e=s.HEAP32.BYTES_PER_ELEMENT,r=n.stackAlloc(t.length*e);return s.HEAP32.set(t,r/e),r}};var i=[],a=0;if(r)for(var l=0;l<r.length;l++){var c=o[Array.isArray(r[l])?"array":typeof r[l]];c?(0===a&&(a=n.stackSave()),i[l]=c(r[l])):i[l]=r[l]}t=function convertReturnValue(t){return"string"===e?utils.UTF8ToString(s.HEAPU8,t):"boolean"===e?Boolean(t):t}(t=n[t].apply(null,i));return 0!==a&&n.stackRestore(a),t},WASM.prototype.mem2str=function(t,e){return utils.UTF8ToString(this.HEAPU8,t,e)},WASM.prototype.str2mem=function(t){var e=utils.lengthBytesUTF8(t),r=this.malloc(e+1);return utils.stringToUTF8(t,this.HEAPU8,r,e),r},WASM.prototype.arr2mem=function(t,e="i32"){const r=this.heap(e);var n=r.BYTES_PER_ELEMENT,e=this.malloc(t.length*n);return r.set(t,e/n),e},WASM.prototype.mem2arr=function(t,e,r="i32"){const n=this.heap(r);t/=n.BYTES_PER_ELEMENT;return Array.from(n.subarray(t,t+e))},WASM.prototype.malloc=function(t){const e=this.exports;let r=0;if("function"==typeof e.malloc)r=e.malloc(t);else{var n=e.stackSave();if(n<t){var s="stack overflow, "+t+" larger than "+n;throw utils.warnOnce(s),new Error(s)}0===this.stack&&(this.stack=n),r=e.stackAlloc(t)}return r},WASM.prototype.free=function(...t){const e=this.exports;"function"==typeof e.free&&t.forEach(t=>{e.free(t)}),this.stack&&(e.stackRestore(this.stack),this.stack=0)},WASM.prototype.getFree=function(){return this.exports.emscripten_stack_get_free()},WASM.prototype.heap=function(t="i32"){switch(t){case"i8":return this.HEAP8;case"i16":return this.HEAP16;case"u8":return this.HEAPU8;case"u16":return this.HEAPU16;case"u32":return this.HEAPU32;case"float":return this.HEAPF32;case"double":return this.HEAPF64;default:return this.HEAP32}};
 let _instance = null;
 var wasm = null;
-let _defaultFn = function () {}
-if (typeof importObject !== 'object') {
-  importObject = {};
-}
-if (typeof importObject.env !== 'object') {
-  importObject.env = {}
-}
-['emscripten_resize_heap',
-  'emscripten_memcpy_big',
-  'emscripten_notify_memory_growth',
-  'emscripten_asm_const_int'
-].forEach(key => {
-  if (typeof importObject.env[key] !== 'function') {
-    importObject.env[key] = _defaultFn;
-  }
-});
-if (typeof importObject.wasi_snapshot_preview1 !== 'object') {
-  importObject.wasi_snapshot_preview1 = {};
-}
-['proc_exit', 'fd_write'].forEach(key => {
-  if (typeof importObject.wasi_snapshot_preview1[key] !== 'function') {
-    importObject.wasi_snapshot_preview1[key] = _defaultFn;
-  }
-});
+if (typeof importObject !== 'object') {importObject = {};}
+void 0===importObject.env&&(importObject.env={}),["emscripten_resize_heap","emscripten_memcpy_big","emscripten_notify_memory_growth","emscripten_asm_const_int"].forEach(e=>{"function"!=typeof importObject.env[e]&&(importObject.env[e]=()=>{})}),void 0===importObject.wasi_snapshot_preview1&&(importObject.wasi_snapshot_preview1={}),["proc_exit","fd_write"].forEach(e=>{"function"!=typeof importObject.wasi_snapshot_preview1[e]&&(importObject.wasi_snapshot_preview1[e]=()=>{})}),"number"!=typeof importObject.INITIAL_MEMORY||importObject.env.memory||(importObject.env.memory=new WebAssembly.Memory({initial:importObject.INITIAL_MEMORY,maximum:"number"==typeof importObject.MAXIMUM_MEMORY?importObject.MAXIMUM_MEMORY:importObject.INITIAL_MEMORY}));
 let _initWASM = function (e) {
   if (e.data.type === '${type}') {
     WebAssembly.instantiate(e.data.mod, importObject).then(function(instance) {
       _instance = instance;
       wasm = new Proxy(new WASM(instance), {
-        get: (obj, k) => {
-          if (k in obj) {
-            return obj[k]
-          }
-          if (k in obj.exports) {
-            return obj.exports[k]
-          }
-        },
-        set: (obj, k, val) => {
-          const exclude = [
-            'malloc',
-            'free',
-            'exports',
-            'memory',
-            'HEAP8',
-            'HEAP16',
-            'HEAP32',
-            'HEAPU8',
-            'HEAPU16',
-            'HEAPU32',
-            'HEAPF32',
-            'HEAPF64',
-          ]
-          if (exclude.includes(k)) {
-            return false
-          }
-          obj[k] = val
-          return true
-        }
+        
+    get: (obj, k) => {
+      if (k in obj) {
+        return obj[k];
+      }
+      if (k in obj.exports) {
+        return obj.exports[k];
+      }
+    },
+    set: (obj, k, val) => {
+      const exclude = [
+        'exports',
+        'memory',
+        'table',
+        'HEAP8',
+        'HEAP16',
+        'HEAP32',
+        'HEAPU8',
+        'HEAPU16',
+        'HEAPU32',
+        'HEAPF32',
+        'HEAPF64'
+      ];
+      if (exclude.includes(k)) {
+        return false;
+      }
+      obj[k] = val;
+      return true;
+    }
+    
       })
-      postMessage({
-        type: 'wasmready'
-      })
+      postMessage({type: 'wasmready'})
     });
     removeEventListener('message', _initWASM);
     _initWASM = null;
@@ -537,6 +61,9 @@ addEventListener('message', _initWASM)
  */
 function createWorker (urlOrModule, urlOrSelector) {
   return new Promise((resolve, reject) => {
+    if (typeof urlOrModule !== 'string' && !(urlOrModule instanceof WebAssembly.Module)) {
+      reject(new Error('no module or url'));
+    }
     // 把wasm塞入worker
     const init = (text) => {
       let url = window.URL.createObjectURL(new Blob([scripts + text]));

@@ -3,78 +3,19 @@ import load from './load';
 const type = 'wasminit';
 const scripts = `
 /*{{UTILS}}*/
-var utils = {
-  lengthBytesUTF8,
-  stringToUTF8,
-  UTF8ToString,
-  convertJsFunctionToWasm,
-  warnOnce
-};
 /*{{WASM}}*/
 let _instance = null;
 var wasm = null;
-let _defaultFn = function () {}
-if (typeof importObject !== 'object') {
-  importObject = {};
-}
-if (typeof importObject.env !== 'object') {
-  importObject.env = {}
-}
-['emscripten_resize_heap',
-  'emscripten_memcpy_big',
-  'emscripten_notify_memory_growth',
-  'emscripten_asm_const_int'
-].forEach(key => {
-  if (typeof importObject.env[key] !== 'function') {
-    importObject.env[key] = _defaultFn;
-  }
-});
-if (typeof importObject.wasi_snapshot_preview1 !== 'object') {
-  importObject.wasi_snapshot_preview1 = {};
-}
-['proc_exit', 'fd_write'].forEach(key => {
-  if (typeof importObject.wasi_snapshot_preview1[key] !== 'function') {
-    importObject.wasi_snapshot_preview1[key] = _defaultFn;
-  }
-});
+if (typeof importObject !== 'object') {importObject = {};}
+/*{{LOAD}}*/
 let _initWASM = function (e) {
   if (e.data.type === '${type}') {
     WebAssembly.instantiate(e.data.mod, importObject).then(function(instance) {
       _instance = instance;
       wasm = new Proxy(new WASM(instance), {
-        get: (obj, k) => {
-          if (k in obj) {
-            return obj[k]
-          }
-          if (k in obj.exports) {
-            return obj.exports[k]
-          }
-        },
-        set: (obj, k, val) => {
-          const exclude = [
-            'malloc',
-            'free',
-            'exports',
-            'memory',
-            'HEAP8',
-            'HEAP16',
-            'HEAP32',
-            'HEAPU8',
-            'HEAPU16',
-            'HEAPU32',
-            'HEAPF32',
-            'HEAPF64',
-          ]
-          if (exclude.includes(k)) {
-            return false
-          }
-          obj[k] = val
-          return true
-        }
+        /*{{INDEX}}*/
       })
-      postMessage({
-        type: 'wasmready'
-      })
+      postMessage({type: 'wasmready'})
     });
     removeEventListener('message', _initWASM);
     _initWASM = null;
@@ -91,6 +32,9 @@ addEventListener('message', _initWASM)
  */
 function createWorker (urlOrModule, urlOrSelector) {
   return new Promise((resolve, reject) => {
+    if (typeof urlOrModule !== 'string' && !(urlOrModule instanceof WebAssembly.Module)) {
+      reject(new Error('no module or url'));
+    }
     // 把wasm塞入worker
     const init = (text) => {
       let url = window.URL.createObjectURL(new Blob([scripts + text]));

@@ -13,6 +13,7 @@ export { WASM };
 export default function (instance, importObject) {
   const asm =  new WASM(instance, importObject);
   return new Proxy(asm, {
+    /* gulp_split */
     get: (obj, k) => {
       if (k in obj) {
         return obj[k];
@@ -41,5 +42,6 @@ export default function (instance, importObject) {
       obj[k] = val;
       return true;
     }
+    /* gulp_split */
   });
 }
