@@ -32,11 +32,11 @@ gulp.task('replace', () => {
       if (p1 === 'UTILS') {
         code = arr[replaceIndex[p1]].replace('export default', 'var utils =');
       } else if (p1 === 'INDEX') {
-        return arr[replaceIndex[p1]];
+        return arr[replaceIndex[p1]].trim();
       } else {
         code = arr[replaceIndex[p1]];
       }
-      return UglifyJS.minify(code, {
+      return UglifyJS.minify(code.trim(), {
         keep_fnames: true
       }).code;
     }))
@@ -73,4 +73,8 @@ gulp.task('es', () => {
   return gulp.src('./temp/**/*')
     .pipe(gulp.dest('./es'));
 });
-gulp.task('build', gulp.series('clean', 'replace', 'rollup', 'babel', gulp.parallel('lib', 'es')));
+gulp.task('copy', () => {
+  return gulp.src('./dist/index.js')
+    .pipe(gulp.dest('./test/data'));
+});
+gulp.task('build', gulp.series('clean', 'replace', 'rollup', 'babel', gulp.parallel('lib', 'es'), 'copy'));

@@ -5,15 +5,20 @@
   </head>
   <body>
     <h1>webassembly test</h1>
+    <section><a href="/coverage/lcov-report/">coverage</a></section>
     <section>
       <div id="add_result">123 + 234 = ??</div>
       <div>worker print text: <span id="worker_print">??</span> <a href="#" id="call_worker">call worker</a></div>
     </section>
     <script id="worker" type="text/js-worker">
+      var wasmready = function () {
+        console.log('wasmready');
+        postMessage({type: 'wasmready'})
+      }
       addEventListener('message', function (e) {
         if (e.data.type !== 'wasminit') {
           // 自动注入wasm对象
-          const helloStr = 'hello worker:'
+          const helloStr = 'hello worker '
           const counter = wasm.counter();
           const ptr = wasm.str2mem(helloStr)
           const retPtr = wasm.hello(ptr)
@@ -69,15 +74,15 @@
         createWorker(hello.module, '#worker').then(function (worker) {
           worker.addEventListener('message', (e) => {
             if (e.data.type === 'wasmready') {
-              worker.postMessage('say hello')
+              worker.postMessage('wasmready');
             } else {
-              document.getElementById('worker_print').textContent = e.data
+              document.getElementById('worker_print').textContent = e.data;
             }
           })
           document.getElementById('call_worker').addEventListener('click', function(e) {
             e.stopPropagation();
             e.preventDefault;
-            worker.postMessage('say hello2');
+            worker.postMessage('');
           })
         });
       });

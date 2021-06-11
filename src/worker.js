@@ -4,18 +4,17 @@ const type = 'wasminit';
 const scripts = `
 /*{{UTILS}}*/
 /*{{WASM}}*/
-let _instance = null;
-var wasm = null;
+let wasm = null;
 if (typeof importObject !== 'object') {importObject = {};}
 /*{{LOAD}}*/
 let _initWASM = function (e) {
   if (e.data.type === '${type}') {
     WebAssembly.instantiate(e.data.mod, importObject).then(function(instance) {
-      _instance = instance;
       wasm = new Proxy(new WASM(instance), {
         /*{{INDEX}}*/
       })
-      postMessage({type: 'wasmready'})
+      if (typeof wasmready === 'function') wasmready();
+      else postMessage({type: 'wasmready'});
     });
     removeEventListener('message', _initWASM);
     _initWASM = null;

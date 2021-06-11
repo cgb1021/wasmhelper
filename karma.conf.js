@@ -1,5 +1,6 @@
 module.exports = function(config) {
   config.set({
+    singleRun: !!process.env.CI,
     // 路径前缀
     basePath: '',
 

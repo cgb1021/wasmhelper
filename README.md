@@ -1,4 +1,6 @@
 # webassembly工具
+[![Travis CI](https://img.shields.io/travis/cgb1021/wasmhelper.svg)](https://travis-ci.com/github/cgb1021/wasmhelper)
+[![Codecov](https://img.shields.io/codecov/c/github/cgb1021/wasmhelper.svg)](https://codecov.io/gh/cgb1021/wasmhelper)
 
 ## webassembly介绍
 https://webassembly.org/
@@ -55,6 +57,11 @@ console.log(result);
 ```
 // html定义web worker代码
 <script id="worker" type="text/js-worker">
+/* when ready,wasmready will be called
+var wasmready = function () {
+  postMessage({type: 'wasmready'})
+}
+*/
 addEventListener('message', function (e) {
   if (e.data.type !== 'wasminit') {
     // 自动注入wasm对象

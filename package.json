@@ -8,7 +8,8 @@
   "scripts": {
     "test": "concurrently --kill-others \"node express.js\" \"karma start ./karma.conf.js\"",
     "lint": "eslint --fix ./src gulpfile.js .eslintrc.js",
-    "build": "gulp build"
+    "build": "gulp build",
+    "codecov": "./node_modules/.bin/codecov"
   },
   "keywords": [
     "webassembly",
@@ -28,6 +29,7 @@
     "babel-loader": "^8.2.2",
     "babel-plugin-istanbul": "^6.0.0",
     "chai": "^4.3.4",
+    "codecov": "^3.8.2",
     "concurrently": "^6.2.0",
     "del": "^5.1.0",
     "eslint": "^7.7.0",
