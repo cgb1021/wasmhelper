@@ -13,8 +13,7 @@ addons:
 
 before_install:
   - docker pull halverneus/static-file-server
-  - docker run -d -p 127.0.0.1:8080:8080 halverneus/static-file-server -v /test/data:/web -e CORS=false
-  - docker ps -a
+  - docker run -d -p 127.0.0.1:8080:8080 halverneus/static-file-server -v /test/data:/ -e CORS=false -e FOLDER=/
 
 script:
   - npm run testci
