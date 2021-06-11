@@ -13,7 +13,7 @@ addons:
 
 before_install:
   - docker pull halverneus/static-file-server
-  - docker run -d -v /test/data:/ -p 8080:8080
+  - docker run -d -p 127.0.0.1:8080:8080 halverneus/static-file-server -v /test/data:/web
   - docker ps -a
 
 script:
