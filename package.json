@@ -7,6 +7,7 @@
   "unpkg": "dist/index.js",
   "scripts": {
     "test": "concurrently --kill-others \"node express.js\" \"karma start ./karma.conf.js\"",
+    "testci": "karma start ./karma.conf.js",
     "lint": "eslint --fix ./src gulpfile.js .eslintrc.js",
     "build": "gulp build",
     "codecov": "./node_modules/.bin/codecov"
