@@ -1,5 +1,5 @@
 # webassembly工具
-[![Travis CI](https://img.shields.io/travis/cgb1021/wasmhelper.svg)](https://travis-ci.com/github/cgb1021/wasmhelper)
+[![Travis CI](https://travis-ci.com/cgb1021/wasmhelper.svg?branch=master)](https://travis-ci.com/github/cgb1021/wasmhelper)
 [![Codecov](https://img.shields.io/codecov/c/github/cgb1021/wasmhelper.svg)](https://codecov.io/gh/cgb1021/wasmhelper)
 
 ## webassembly介绍
