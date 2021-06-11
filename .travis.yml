@@ -11,6 +11,9 @@ services:
 addons:
   chrome: stable
 
+before_script:
+  - npm run server
+
 script:
   - npm run testci
 
