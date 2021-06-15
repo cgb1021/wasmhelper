@@ -14,10 +14,10 @@ addons:
 before_install:
   - echo ${TRAVIS_BUILD_DIR}/test/data
   - docker pull halverneus/static-file-server
-  - docker run -d -p 8080:8080 halverneus/static-file-server -v ${TRAVIS_BUILD_DIR}/test/data:/web -e CORS=false
-  - docker ps -a
+  - docker run -d -p 127.0.0.1:8080:8080 halverneus/static-file-server -v ${TRAVIS_BUILD_DIR}/test/data:/web -e CORS=false
 
 before_script:
+  - docker ps -a
   - curl http://127.0.0.1:8080/index.html
 
 script:
