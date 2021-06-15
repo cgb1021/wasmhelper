@@ -17,12 +17,12 @@ addons:
 #before_install:
 #  - echo $TRAVIS_BUILD_DIR/test/data
 install:
-  - docker pull nginx
-  - docker run --name nginx -p 8080:80 -v ${TRAVIS_BUILD_DIR}/test/data:/usr/share/nginx/html:ro -d nginx
+  - docker pull nginx:latest
+  - docker run --name nginx -p 8080:80 -v ${TRAVIS_BUILD_DIR}/test/nginx/nginx.conf:/etc/nginx/nginx.conf -v ${TRAVIS_BUILD_DIR}/test/data:/usr/share/nginx/html:ro -d nginx
 
 before_script:
   - docker ps -a
-  - curl -v -x "" http://localhost:8080/hello.wasm
+  - curl -I -x "" http://localhost:8080/hello.wasm
 script:
   - npm i
   - npm run testci
