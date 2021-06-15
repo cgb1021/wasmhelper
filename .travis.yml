@@ -12,8 +12,9 @@ addons:
   chrome: stable
 
 before_install:
+  - echo $TRAVIS_BUILD_DIR
   - docker pull halverneus/static-file-server
-  - docker run -d -p 8080:8080 halverneus/static-file-server -v ${TRAVIS_BUILD_DIR}/test/data:/web -e FOLDER=/web -e CORS=false
+  - docker run -d -p 8080:8080 halverneus/static-file-server -v ${TRAVIS_BUILD_DIR}/test/data:/web -e CORS=false
   - docker ps -a
 script:
   - npm run testci
