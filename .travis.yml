@@ -23,6 +23,7 @@ before_script:
   - docker ps -a
 #  - curl -v -x "" http://localhost:8080/index.html
 script:
+  - npm i
   - npm run testci
 after_script:
   - npm run codecov
