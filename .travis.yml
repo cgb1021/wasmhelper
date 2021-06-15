@@ -17,7 +17,7 @@ before_install:
   - echo $TRAVIS_BUILD_DIR/test/data
 install:
   - docker pull nginx
-  - docker run --name nginx -p 8080:80 -v ${TRAVIS_BUILD_DIR}/test/data:/usr/share/nginx/html -d nginx
+  - docker run --name nginx -p 8080:80 -v ${TRAVIS_BUILD_DIR}/test/data:/usr/share/nginx/html:ro -d nginx
 #  - docker run -d -p 8080:8080 halverneus/static-file-server -v $TRAVIS_BUILD_DIR/test/data:/web -e CORS=true
 
 before_script:
