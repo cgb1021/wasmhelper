@@ -10,6 +10,8 @@ services:
 # 指定要使用的浏览器以及版本
 addons:
   chrome: stable
+  hosts:
+    - localhost
 
 before_install:
   - echo $TRAVIS_BUILD_DIR/test/data
@@ -19,7 +21,7 @@ install:
 
 before_script:
   - docker ps -a
-  - curl http://127.0.0.1:8080/index.html
+  - curl -v http://localhost:8080/index.html
 script:
   - npm run testci
 after_script:
