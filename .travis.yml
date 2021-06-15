@@ -10,19 +10,18 @@ services:
 # 指定要使用的浏览器以及版本
 addons:
   chrome: stable
-  hosts:
-    - localhost
+#  hosts:
+#    - localhost
 
-before_install:
-  - echo $TRAVIS_BUILD_DIR/test/data
+#before_install:
+#  - echo $TRAVIS_BUILD_DIR/test/data
 install:
   - docker pull nginx
   - docker run --name nginx -p 8080:80 -v ${TRAVIS_BUILD_DIR}/test/data:/usr/share/nginx/html:ro -d nginx
-#  - docker run -d -p 8080:8080 halverneus/static-file-server -v $TRAVIS_BUILD_DIR/test/data:/web -e CORS=true
 
 before_script:
   - docker ps -a
-  - curl -v -x "" http://localhost:8080/index.html
+#  - curl -v -x "" http://localhost:8080/index.html
 script:
   - npm run testci
 after_script:
