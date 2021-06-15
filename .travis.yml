@@ -16,6 +16,9 @@ before_install:
   - docker pull halverneus/static-file-server
   - docker run -d -p 8080:8080 halverneus/static-file-server -v ${TRAVIS_BUILD_DIR}/test/data:/web -e CORS=true
   - docker ps -a
+before_script:
+  - curl http://localhost:8080/index.html
+
 script:
   - npm run testci
 
