@@ -6,6 +6,7 @@ node_js:
 # 使用 xvfb 来模拟显示 GUI
 services:
   - docker
+  - xvfb
 
 # 指定要使用的浏览器以及版本
 addons:
