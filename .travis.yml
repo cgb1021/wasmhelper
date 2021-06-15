@@ -22,7 +22,7 @@ install:
 
 before_script:
   - docker ps -a
-  - curl -I -x "" http://localhost:8080/hello.wasm
+  - curl -I http://localhost:8080/hello.wasm
 script:
   - npm i
   - npm run testci
