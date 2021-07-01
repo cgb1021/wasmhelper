@@ -34,7 +34,8 @@ export default function (instance, importObject) {
         'HEAPU16',
         'HEAPU32',
         'HEAPF32',
-        'HEAPF64'
+        'HEAPF64',
+        'bytesLength'
       ];
       if (exclude.includes(k)) {
         return false;

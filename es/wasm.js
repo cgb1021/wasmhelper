@@ -15,6 +15,7 @@ function WASM(instance, importObject = {}) {
   this.module = null;
   this.table = null;
   this.stack = 0;
+  this.byteLength = 0;
 
   const callbacks = [];
   const error = importObject && typeof importObject.error === 'function' ? importObject.error : null;
@@ -29,15 +30,7 @@ function WASM(instance, importObject = {}) {
     } else {
       throw new Error('no memory buffer');
     }
-    const buf = this.memory.buffer;
-    this.HEAP8 = new Int8Array(buf);
-    this.HEAP16 = new Int16Array(buf);
-    this.HEAP32 = new Int32Array(buf);
-    this.HEAPU8 = new Uint8Array(buf);
-    this.HEAPU16 = new Uint16Array(buf);
-    this.HEAPU32 = new Uint32Array(buf);
-    this.HEAPF32 = new Float32Array(buf);
-    this.HEAPF64 = new Float64Array(buf);
+    this.setHeap();
     this.exports = exports;
     this.table = exports.__indirect_function_table;
     callbacks.forEach(fn => fn.call(this));
@@ -49,6 +42,18 @@ function WASM(instance, importObject = {}) {
       error(e);
     }
   };
+  this.setHeap = () => {
+    const buf = this.memory.buffer;
+    this.byteLength = buf.byteLength;
+    this.HEAP8 = new Int8Array(buf);
+    this.HEAP16 = new Int16Array(buf);
+    this.HEAP32 = new Int32Array(buf);
+    this.HEAPU8 = new Uint8Array(buf);
+    this.HEAPU16 = new Uint16Array(buf);
+    this.HEAPU32 = new Uint32Array(buf);
+    this.HEAPF32 = new Float32Array(buf);
+    this.HEAPF64 = new Float64Array(buf);
+  };
   this.ready = (fn) => {
     if (typeof fn === 'function') {
       if (isInit) fn.call(this);
@@ -56,7 +61,7 @@ function WASM(instance, importObject = {}) {
     }
     return isInit;
   };
-  this.fn2wasm = function (func, sig = '') {
+  this.fn2wasm = (func, sig = '') => {
     if (typeof func !== 'function') return 0;
     if (!sig || typeof sig !== 'string') sig = 'v';
     if (!functionsInTableMap) {
@@ -231,6 +236,9 @@ WASM.prototype.malloc = function (bytes) {
     }
     ptr = exports.stackAlloc(bytes);
   }
+  if (this.byteLength !== this.memory.buffer.byteLength) {
+    this.setHeap();
+  }
   return ptr;
 };
 /*
@@ -254,7 +262,7 @@ WASM.prototype.free = function (...args) {
  * @return {Number}
  */
 WASM.prototype.getFree = function () {
-  return this.exports.emscripten_stack_get_free();
+  return this.exports.stackSave();
 };
 /*
  * @description: 获取内存
